@@ -1,0 +1,17 @@
+name: intsec_env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - pandas
+  - numpy
+  - scikit-learn
+  - jupyter
+  - pip:
+    - scapy
+    - kafka-python
+    - elasticsearch
+    - joblib
+    - watchdog

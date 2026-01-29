@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints
+venv/
+.env
+.idea/
+.vscode/
+data/pcap/*.pcap
+data/processed/*.csv
+data/models/*.pkl
+*.log
