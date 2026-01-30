@@ -1,13 +1,14 @@
 version: '3'
 services:
   zookeeper:
-    image: 'bitnami/zookeeper:latest'
+    image: 'bitnami/zookeeper:3.9'  # "latest" yerine "3.9" yazdık
     ports:
       - '2181:2181'
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+
   kafka:
-    image: 'bitnami/kafka:latest'
+    image: 'bitnami/kafka:3.6'      # "latest" yerine "3.6" yazdık
     ports:
       - '9092:9092'
     environment:
@@ -18,6 +19,7 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
     environment:
@@ -25,6 +27,7 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
+
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.9
     ports:
