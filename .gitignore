@@ -1,5 +1,7 @@
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyo
 .ipynb_checkpoints
 venv/
 .env
@@ -8,4 +10,13 @@ venv/
 data/pcap/*.pcap
 data/processed/*.csv
 data/models/*.pkl
+data/multiclass_dataset_merged.csv
+data/multiclass_dataset.parquet
+data/*.csv
+!data/.gitkeep
 *.log
+logs/*.log
+!logs/.gitkeep
+.DS_Store
+Thumbs.db
+**/.ipynb_checkpoints/
