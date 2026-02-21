@@ -9,6 +9,7 @@ venv/
 .vscode/
 data/pcap/*.pcap
 data/processed/*.csv
+data/processed/*.parquet
 data/models/*.pkl
 data/multiclass_dataset_merged.csv
 data/multiclass_dataset.parquet
