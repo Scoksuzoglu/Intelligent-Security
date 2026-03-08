@@ -21,3 +21,10 @@ logs/*.log
 .DS_Store
 Thumbs.db
 **/.ipynb_checkpoints/
+# NTFlowLyzer files
+NTFlowLyzer/
+
+# Jupyter notebooks
+*.ipynb
+Untitled*.ipynb
+NTLFlowLyzer/
