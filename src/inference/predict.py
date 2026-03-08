@@ -12,7 +12,7 @@ class ModelPredictor:
     Uses top 30 features selected from Random Forest feature importance.
     """
     
-    def __init__(self, model_dir='models/multiclass_v1'):
+    def __init__(self, model_dir='data/models/multiclass_v1'):
         """
         Load model, scaler, and metadata.
         

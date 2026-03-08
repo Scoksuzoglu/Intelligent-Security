@@ -153,6 +153,20 @@ class PCAPProcessor:
             "features_ignore_list": FEATURES_IGNORE_LIST
         }
 
+    def _rename_columns(self, csv_path: str):
+        """
+        NTFlowLyzer kolon isimlerini model feature isimlerine gore duzenle.
+        Ornek: bwd_segment_size_mean -> bwd_avg_segment_size
+        """
+        import pandas as pd
+        rename_map = {
+            'bwd_segment_size_mean': 'bwd_avg_segment_size',
+        }
+        df = pd.read_csv(csv_path)
+        df = df.rename(columns=rename_map)
+        df.to_csv(csv_path, index=False)
+        log_system(f"Column names normalized: {list(rename_map.keys())} -> {list(rename_map.values())}", 'info')
+
     def process_pcap(self, pcap_file: str, output_csv: str = None) -> str:
         """
         Process a single PCAP file with NTFlowLyzer.
@@ -209,6 +223,9 @@ class PCAPProcessor:
             print(f"NTFlowLyzer completed!")
             print(f"  Output: {output_path}")
             log_system(f"PCAP processing complete: {output_path}", 'info')
+
+            # Kolon isimlerini model formatina cevir
+            self._rename_columns(output_path)
 
         except subprocess.TimeoutExpired:
             error_msg = "NTFlowLyzer timeout (>5 min)"

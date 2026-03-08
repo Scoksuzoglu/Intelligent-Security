@@ -13,7 +13,7 @@ class DataPreprocessor:
     Preprocess NTFlowLyzer CSV output for model inference.
     """
     
-    def __init__(self, model_dir='models/multiclass_v1'):
+    def __init__(self, model_dir='data/models/multiclass_v1'):
         """Load feature names and metadata columns."""
         self.model_dir = Path(model_dir)
         
