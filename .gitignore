@@ -21,3 +21,5 @@ logs/*.log
 .DS_Store
 Thumbs.db
 **/.ipynb_checkpoints/
+Untitled.ipynb
+NTLFlowLyzer/
