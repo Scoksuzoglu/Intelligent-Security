@@ -21,6 +21,9 @@ logs/*.log
 .DS_Store
 Thumbs.db
 **/.ipynb_checkpoints/
+# Claude Code local settings
+.claude/
+
 # NTFlowLyzer files
 NTFlowLyzer/
 
