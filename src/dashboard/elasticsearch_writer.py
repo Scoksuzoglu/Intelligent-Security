@@ -22,7 +22,7 @@ def predict_and_index(csv_file, n_samples=500):
     model, scaler, features, metadata = load_model()
     classes = metadata['class_names']
     
-    print(f"📂 {csv_file} okunuyor...")
+    print(f"[*] {csv_file} okunuyor...")
     df = pd.read_csv(f'data/processed/{csv_file}')
     df = df.sample(min(n_samples, len(df)), random_state=42)
     
@@ -33,11 +33,11 @@ def predict_and_index(csv_file, n_samples=500):
     probs = model.predict_proba(X_scaled)
     confidence = probs.max(axis=1)
     
-    print(f"✅ Tahminler yapıldı, Elasticsearch'e yazılıyor...")
+    print(f"[+] Tahminler yapildi, Elasticsearch'e yaziliyor...")
     
     for i, (_, row) in enumerate(df.iterrows()):
         doc = {
-            'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+            '@timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.000Z'),
             'source_ip': str(row.get('src_ip', 'unknown')),
             'destination_ip': str(row.get('dst_ip', 'unknown')),
             'src_port': int(row.get('src_port', 0)),
@@ -48,7 +48,7 @@ def predict_and_index(csv_file, n_samples=500):
         }
         es.index(index='intsec-predictions', document=doc)
     
-    print(f"🎉 {len(df)} kayıt Elasticsearch'e yazıldı!")
+    print(f"[+] {len(df)} kayit Elasticsearch'e yazildi!")
 
 if __name__ == "__main__":
     csv_files = [
