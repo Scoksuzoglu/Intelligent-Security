@@ -252,16 +252,17 @@ Sonra Kibana → Stack Management → Index Patterns → `intsec-predictions`'ı
 ## Devam Eden / Eksik Görevler
 
 ### Ahmet'in Görevleri
-- [ ] **ÖNCELİK 4 — Kibana Donut Chart** (Donut chart var ama dashboard'a eklenmedi)
+- [ ] **ÖNCELİK 1 — Scapy Tabanlı Real-Time Pipeline**
+  - `data/models/pipeline.py` tamamen yeniden yazılacak
+  - NTLFlowLyzer kaldırılacak, Scapy ile canlı paket yakalanacak
+  - 30 feature Scapy ile hesaplanacak (IAT, packet rate, header bytes vs.)
+  - Her 5-10 saniyede ES'e yazılacak
+  - Semih modeli yeniden eğitince feature uyumu test edilmeli
+
+- [ ] **ÖNCELİK 2 — Kibana Donut Chart** (Donut chart var ama dashboard'a eklenmedi)
   - Kibana → Visualize Library → Create Visualization → "Pie"
   - Index: `intsec-predictions`, Slice by: `attack_type.keyword`
   - Donut modunu aç, kaydet: "Saldiri Tipi Dagilimi"
-
-- [ ] **ÖNCELİK 5 — Streamlit Elasticsearch Entegrasyonu**
-  - `src/dashboard/elasticsearch_reader.py` yazılacak
-  - `fetch_predictions(limit=200)` fonksiyonu — ES'ten okuyacak
-  - `app.py`'de CSV yerine bu kullanılacak
-  - Eklenecek grafikler: Line chart (7 günlük trend), Bar chart (Top 10 IP)
 
 ### Semih'in Görevleri
 - [ ] **KRİTİK — Modeli yeniden eğit**
@@ -366,6 +367,47 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-04 (Session 4 — Real-Time Pipeline)
+
+**Yapılanlar:**
+- Ubuntu ve Windows IP'leri değişmişti (DHCP): Ubuntu → `192.168.1.17`, Windows → `192.168.1.16`
+- Windows Firewall'da port 9200 açıldı (Elasticsearch dışarıya erişilebilir oldu)
+- Docker `0.0.0.0:9200:9200` olarak güncellendi (dışarıdan erişim için)
+- Model dosyaları Windows'tan Ubuntu'ya aktarıldı (`/home/intsec/models/multiclass_v1/`)
+- Ubuntu'ya `pandas`, `scikit-learn`, `elasticsearch`, NTLFlowLyzer bağımlılıkları kuruldu (hem intsec hem root için)
+- `data/models/pipeline.py` yazıldı — Ubuntu'da çalışan real-time pipeline:
+  - tcpdump ile paket yakalar
+  - NTLFlowLyzer ile PCAP → CSV
+  - Model tahmin yapar
+  - Windows ES'e (`http://192.168.1.16:9200`) yazar
+- Pipeline test edildi: 49.952 kayıt ES'e yazıldı, Kibana'da görüntülendi
+
+**Keşfedilen Kritik Sorun — NTLFlowLyzer Real-Time İçin Uygun Değil:**
+- NTLFlowLyzer her çalıştığında Python modüllerini sıfırdan yüklüyor
+- 100 paket için de 50.000 paket için de başlama süresi aynı (~1-2 dakika)
+- Bu tool batch işleme için tasarlanmış, streaming/real-time için değil
+- Gerçek near real-time mümkün değil NTLFlowLyzer ile
+
+**Çözüm Planı — Scapy Tabanlı Live Feature Extractor:**
+- NTLFlowLyzer tamamen kaldırılacak
+- Scapy ile ağ arayüzü canlı dinlenecek
+- Her N saniyede flow feature'ları Python ile hesaplanacak (aynı 30 feature)
+- Model anında tahmin yapacak, ES'e yazacak
+- Beklenen döngü süresi: 5-10 saniye
+- **NOT:** Feature hesaplamalarının NTLFlowLyzer ile birebir uyumlu olması lazım, yoksa model yanlış tahmin yapar. Semih modeli yeniden eğitince bu uyum da test edilmeli.
+- `data/models/pipeline.py` güncellenmesi gerekiyor
+
+**Ubuntu'da Kurulu Olan Şeyler (2026-04-04 itibarıyla):**
+- Python3, pip3, tcpdump, git
+- NTLFlowLyzer (hem intsec user hem root için kurulu)
+- scikit-learn 1.7.2, pandas, elasticsearch, joblib
+- Model dosyaları: `/home/intsec/models/multiclass_v1/`
+- Pipeline script: `/home/intsec/pipeline.py`
+
+**ÖNEMLİ — IP Adresleri DHCP ile değişiyor:**
+- Her oturumda `ipconfig` (Windows) ve `ip addr show` (Ubuntu) ile IP'leri kontrol et
+- `pipeline.py` içindeki `ES_HOST` değişkenini güncelle
+
 ### 2026-04-02/03 (Session 3 — Büyük Sprint)
 **Yapılanlar:**
 - Kibana `@timestamp` sorunu çözüldü (alan adı `timestamp`→`@timestamp` düzeltildi, index pattern yeniden oluşturuldu)
@@ -405,4 +447,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-03*
+*Son güncelleme: 2026-04-04*
