@@ -10,11 +10,11 @@ es = Elasticsearch(['http://localhost:9200'])
 
 # Model yükle
 def load_model():
-    model = joblib.load('data/models/multiclass_v1/model.joblib')
-    scaler = joblib.load('data/models/multiclass_v1/scaler.joblib')
-    with open('data/models/multiclass_v1/feature_names.json') as f:
+    model = joblib.load('data/models/multiclass_v2/model.joblib')
+    scaler = joblib.load('data/models/multiclass_v2/scaler.joblib')
+    with open('data/models/multiclass_v2/feature_names.json') as f:
         features = json.load(f)
-    with open('data/models/multiclass_v1/metadata.json') as f:
+    with open('data/models/multiclass_v2/metadata.json') as f:
         metadata = json.load(f)
     return model, scaler, features, metadata
 
@@ -24,8 +24,9 @@ def predict_and_index(csv_file, n_samples=500):
     
     print(f"[*] {csv_file} okunuyor...")
     df = pd.read_csv(f'data/processed/{csv_file}')
+    df = df.rename(columns={'bwd_segment_size_mean': 'bwd_avg_segment_size'})
     df = df.sample(min(n_samples, len(df)), random_state=42)
-    
+
     X = df[features].fillna(0).replace([np.inf, -np.inf], 0)
     X_scaled = scaler.transform(X)
     
@@ -52,10 +53,7 @@ def predict_and_index(csv_file, n_samples=500):
 
 if __name__ == "__main__":
     csv_files = [
-        'botnet_ares.csv',
-        'ddos_loit.csv', 
-        'portscan.csv',
-        'friday_benign.csv'
+        'ddos_flows.csv',
     ]
     for csv in csv_files:
-        predict_and_index(csv, n_samples=200)
+        predict_and_index(csv, n_samples=500)

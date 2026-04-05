@@ -184,11 +184,11 @@ import pandas as pd, numpy as np, joblib, json
 from datetime import datetime
 from elasticsearch import Elasticsearch
 
-model = joblib.load('data/models/multiclass_v1/model.joblib')
-scaler = joblib.load('data/models/multiclass_v1/scaler.joblib')
-with open('data/models/multiclass_v1/feature_names.json') as f:
+model = joblib.load('data/models/multiclass_v2/model.joblib')
+scaler = joblib.load('data/models/multiclass_v2/scaler.joblib')
+with open('data/models/multiclass_v2/feature_names.json') as f:
     features = json.load(f)
-with open('data/models/multiclass_v1/metadata.json') as f:
+with open('data/models/multiclass_v2/metadata.json') as f:
     metadata = json.load(f)
 classes = metadata['class_names']
 
@@ -308,7 +308,7 @@ streamlit run src/dashboard/app.py   # opsiyonel
 | ES Writer | `src/dashboard/elasticsearch_writer.py` |
 | ES Reader (yapılacak) | `src/dashboard/elasticsearch_reader.py` |
 | File Watcher | `src/watcher/file_watcher.py` |
-| Model | `data/models/multiclass_v1/` |
+| Model | `data/models/multiclass_v2/` |
 | İşlenmiş CSV'ler | `data/processed/` |
 | PCAP klasörü | `data/pcap/` |
 | ddos_flows.csv (gerçek saldırı) | `data/processed/ddos_flows.csv` (42MB) |
