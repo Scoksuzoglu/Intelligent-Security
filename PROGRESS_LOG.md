@@ -366,6 +366,45 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-06 (Session 5 — multiclass_v2 Test + Kibana Dashboard)
+
+**Yapılanlar:**
+- `oksuzoglu_04_04` branch'ine geçildi — Semih'in multiclass_v2 modeli incelendi
+- multiclass_v2 model bilgileri:
+  - RandomForestClassifier, 100 estimator, max_depth=20
+  - Test accuracy: %99.83, F1: 0.9984
+  - 6 sınıf: Benign, DoS/DDoS, Web Attack, Port Scan, Brute Force, Botnet
+  - 116 feature → 30 feature seçimi
+- `data/models/pipeline.py` güncellendi:
+  - `multiclass_v1` → `multiclass_v2`
+  - NTLFlowLyzer config'e `features_ignore_list` eklendi (daha hızlı çalışması için)
+  - `bwd_segment_size_mean → bwd_avg_segment_size` rename düzeltildi
+  - PACKET_COUNT 200'e ayarlandı
+- multiclass_v2 model dosyaları Ubuntu'ya aktarıldı (`/home/intsec/models/multiclass_v2/`)
+- pipeline.py Ubuntu'ya aktarıldı (`/home/intsec/pipeline.py`)
+- Windows Firewall'a ES-9200 kuralı eklendi (admin terminal ile)
+- Kali'den hping3 flood saldırısı yapıldı → pipeline **DoS/DDoS doğru tespit etti** (~%90+)
+- Kali'den nping ile farklı tool testi yapıldı → yine DoS/DDoS tespit edildi
+- Port Scan (nmap -sS -p 1-1000) → çoğunlukla DoS/DDoS, 1 adet Port Scan (confidence 0.5)
+- Kibana'da pie chart oluşturuldu: Aggregation based → Pie → attack_type.keyword
+- Dashboard oluşturuldu, pie chart + discover yan yana
+- Port Scan için büyük PCAP (131k paket) alındı ama NTLFlowLyzer CPU soft lockup yaptı — iptal edildi
+
+**Öğrenilen Dersler:**
+- hping3 flood Ubuntu'nun ağını kilitleyebiliyor → kısa tutmak lazım (5-10 sn)
+- NTLFlowLyzer 131k paket için 20+ dakika sürüyor ve CPU'yu kilitledi → PCAP küçük tutulmalı
+- Ping (ICMP) Windows Firewall tarafından bloke ediliyor ama TCP 9200 çalışıyor
+
+**Yapılacaklar (Semih için):**
+- Port Scan, Brute Force, Web Attack, Botnet için ayrı CSV'ler üretilecek
+- Bu CSV'lerle model yeniden eğitilecek
+- Bunun için küçük PCAP alınıp NTLFlowLyzer ile işlenecek
+
+**Ubuntu IP (2026-04-06):** `192.168.1.17`
+**Windows IP (2026-04-06):** `192.168.1.16`
+
+---
+
 ### 2026-04-02/03 (Session 3 — Büyük Sprint)
 **Yapılanlar:**
 - Kibana `@timestamp` sorunu çözüldü (alan adı `timestamp`→`@timestamp` düzeltildi, index pattern yeniden oluşturuldu)
@@ -405,4 +444,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-03*
+*Son güncelleme: 2026-04-06*
