@@ -366,6 +366,27 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-09 (Session 7 — multiclass_v3 Model Eğitimi)
+
+**Yapılanlar:**
+- `notebooks/05_train_multiclass_v3.ipynb` oluşturuldu ve Jupyter'da çalıştırıldı
+- multiclass_v2 verisi (876.793 satır) + `portscan_flows.csv` (24.887 gerçek nmap Port Scan flow) birleştirildi
+- `bwd_segment_size_mean` → `bwd_avg_segment_size` rename (NTLFlowLyzer uyumu)
+- Port Scan label = 3 olarak atandı (NTLFlowLyzer 'Unknown' üretiyor)
+- Aynı 30 feature, aynı RandomForest (100 estimator, max_depth=20, class_weight=balanced)
+- **multiclass_v3 sonuçları:**
+  - Toplam örnek: 901.680 (v2'ye +24.887)
+  - Port Scan örnekleri: 186.210 (161.323 CIC + 24.887 gerçek nmap)
+  - Test Accuracy: **%99.85** (v2: %99.83)
+  - F1 Score: **%99.86** (v2: %99.84)
+- Dosyalar: `data/models/multiclass_v3/model3.joblib`, `scaler3.joblib`, `feature_names3.json`, `metadata3.json`
+- pipeline.py güncellenmedi — v3 ayrı klasörde duruyor
+
+**Öğrenilen Dersler:**
+- Gerçek nmap verisi eklemek Port Scan tespitini iyileştirdi, genel accuracy da arttı
+
+---
+
 ### 2026-04-09 (Session 6 — Port Scan CSV Üretimi + Pipeline Sorun Giderme)
 
 **Yapılanlar:**
