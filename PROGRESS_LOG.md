@@ -366,6 +366,34 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-09 (Session 7 — Demo Sunumu + Ağ Sorunları Çözüldü)
+
+**Yapılanlar:**
+- Demo sunumu başarıyla tamamlandı
+- Ağ sorunları çözüldü: mobil hotspot client isolation yapıyordu → iPhone hotspot ile çözüldü
+- Her oturumda IP değişiyor, pipeline.py güncelleme rutini otururdu:
+  - Windows: `sed -i 's/ESKİ_IP/YENİ_IP/' /home/intsec/pipeline.py`
+  - Ubuntu DHCP yenileme: `sudo dhclient -r enp0s3 && sudo dhclient enp0s3`
+  - Kali DHCP yenileme: `sudo ip link set eth0 down && sudo ip link set eth0 up`
+- Demo anındaki IP'ler:
+  - Windows: `172.20.10.2`
+  - Ubuntu: `172.20.10.3`
+  - Kali: `172.20.10.4`
+- Pipeline tcpdump sorunu çözüldü: `sudo python3 pipeline.py` ile çalıştırınca iç içe sudo sorunu çıkıyordu → `sudo` ile başlatmak yeterli
+- DDoS tespiti Kibana'da canlı gösterildi
+
+**Öğrenilen Dersler:**
+- Mobil hotspot client isolation yapabilir → iPhone hotspot daha iyi çalışıyor
+- Ubuntu DHCP yenilemesi gerekebilir (`dhclient`)
+- Kali'de `dhclient` yok, `ip link down/up` ile yenile
+- Her oturumda Windows IP kontrol et, pipeline.py güncelle
+
+**Ubuntu IP (demo):** `172.20.10.3`
+**Windows IP (demo):** `172.20.10.2`
+**Kali IP (demo):** `172.20.10.4`
+
+---
+
 ### 2026-04-09 (Session 6 — Port Scan CSV Üretimi + Pipeline Sorun Giderme)
 
 **Yapılanlar:**
@@ -478,4 +506,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-09*
+*Son güncelleme: 2026-04-09 (Session 7)*
