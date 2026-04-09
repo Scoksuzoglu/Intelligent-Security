@@ -366,6 +366,40 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-09 (Session 6 — Port Scan CSV Üretimi + Pipeline Sorun Giderme)
+
+**Yapılanlar:**
+- Docker compose başlatıldı (ES + Kibana + Kafka ayağa kalktı)
+- Windows IP değişmişti: `192.168.1.16` → `192.168.1.198` (Wi-Fi)
+- Ubuntu IP bu oturumda: `192.168.1.200`
+- Ubuntu'da `pipeline.py` güncellendi: `sed -i 's/192.168.1.16/192.168.1.198/g'`
+- Ubuntu'da python3 kurulu değildi (VM muhtemelen önceki snapshot'a dönmüş):
+  - `sudo apt install -y python3 python3-pip`
+  - `pip3 install elasticsearch pandas scikit-learn joblib numpy`
+- `/home/intsec/ntl_config.json` permission hatası → `sudo chmod 666` ile düzeltildi
+- `/tmp/capture.pcap` permission hatası → `sudo chmod 777 /tmp` veya `setcap` ile düzeltildi
+- Pipeline başlatıldı → Kali saldırmadan bile DoS/DDoS trafik Kibana'ya düşmeye başladı (pipeline çalışıyor)
+- **Port Scan CSV üretimi:**
+  - Ubuntu'da: `sudo tcpdump -i enp0s3 -w /tmp/portscan.pcap -c 50000`
+  - Kali'den: `sudo nmap -sS -p 1-65535 --min-rate 5000 192.168.1.200`
+  - NTLFlowLyzer: 50.000 paket → **24.887 flow** → `portscan_flows.csv`
+  - Windows'a SCP ile indirildi: `C:/Users/ahmet/Desktop/portscan_flows.csv`
+  - `portscan_flows.csv` Semih'e gönderildi → model v3 eğitimi için
+
+**Öğrenilen Dersler:**
+- VM yeniden başlatıldığında python3 kurulumu gidebilir (snapshot sorunu) — kurulumu tekrarlamak gerekiyor
+- `ntl_config.json` ve `/tmp` dizini için sudo gerekebilir
+- NTLFlowLyzer 50.000 paket için ~5 dakika sürüyor (131k'ya kıyasla makul)
+
+**Semih'e Gönderilen Dosyalar:**
+- `ddos_flows.csv` (42MB, hping3 DDoS — Session 3'te)
+- `portscan_flows.csv` (24.887 flow, nmap Port Scan — bu session)
+
+**Ubuntu IP (2026-04-09):** `192.168.1.200`
+**Windows IP (2026-04-09):** `192.168.1.198`
+
+---
+
 ### 2026-04-06 (Session 5 — multiclass_v2 Test + Kibana Dashboard)
 
 **Yapılanlar:**
@@ -444,4 +478,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-06*
+*Son güncelleme: 2026-04-09*
