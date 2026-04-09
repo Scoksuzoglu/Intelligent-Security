@@ -366,6 +366,79 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-09 (Session 6 — Port Scan CSV Üretimi + Pipeline Sorun Giderme)
+
+**Yapılanlar:**
+- Docker compose başlatıldı (ES + Kibana + Kafka ayağa kalktı)
+- Windows IP değişmişti: `192.168.1.16` → `192.168.1.198` (Wi-Fi)
+- Ubuntu IP bu oturumda: `192.168.1.200`
+- Ubuntu'da `pipeline.py` güncellendi: `sed -i 's/192.168.1.16/192.168.1.198/g'`
+- Ubuntu'da python3 kurulu değildi (VM muhtemelen önceki snapshot'a dönmüş):
+  - `sudo apt install -y python3 python3-pip`
+  - `pip3 install elasticsearch pandas scikit-learn joblib numpy`
+- `/home/intsec/ntl_config.json` permission hatası → `sudo chmod 666` ile düzeltildi
+- `/tmp/capture.pcap` permission hatası → `sudo chmod 777 /tmp` veya `setcap` ile düzeltildi
+- Pipeline başlatıldı → Kali saldırmadan bile DoS/DDoS trafik Kibana'ya düşmeye başladı (pipeline çalışıyor)
+- **Port Scan CSV üretimi:**
+  - Ubuntu'da: `sudo tcpdump -i enp0s3 -w /tmp/portscan.pcap -c 50000`
+  - Kali'den: `sudo nmap -sS -p 1-65535 --min-rate 5000 192.168.1.200`
+  - NTLFlowLyzer: 50.000 paket → **24.887 flow** → `portscan_flows.csv`
+  - Windows'a SCP ile indirildi: `C:/Users/ahmet/Desktop/portscan_flows.csv`
+  - `portscan_flows.csv` Semih'e gönderildi → model v3 eğitimi için
+
+**Öğrenilen Dersler:**
+- VM yeniden başlatıldığında python3 kurulumu gidebilir (snapshot sorunu) — kurulumu tekrarlamak gerekiyor
+- `ntl_config.json` ve `/tmp` dizini için sudo gerekebilir
+- NTLFlowLyzer 50.000 paket için ~5 dakika sürüyor (131k'ya kıyasla makul)
+
+**Semih'e Gönderilen Dosyalar:**
+- `ddos_flows.csv` (42MB, hping3 DDoS — Session 3'te)
+- `portscan_flows.csv` (24.887 flow, nmap Port Scan — bu session)
+
+**Ubuntu IP (2026-04-09):** `192.168.1.200`
+**Windows IP (2026-04-09):** `192.168.1.198`
+
+---
+
+### 2026-04-06 (Session 5 — multiclass_v2 Test + Kibana Dashboard)
+
+**Yapılanlar:**
+- `oksuzoglu_04_04` branch'ine geçildi — Semih'in multiclass_v2 modeli incelendi
+- multiclass_v2 model bilgileri:
+  - RandomForestClassifier, 100 estimator, max_depth=20
+  - Test accuracy: %99.83, F1: 0.9984
+  - 6 sınıf: Benign, DoS/DDoS, Web Attack, Port Scan, Brute Force, Botnet
+  - 116 feature → 30 feature seçimi
+- `data/models/pipeline.py` güncellendi:
+  - `multiclass_v1` → `multiclass_v2`
+  - NTLFlowLyzer config'e `features_ignore_list` eklendi (daha hızlı çalışması için)
+  - `bwd_segment_size_mean → bwd_avg_segment_size` rename düzeltildi
+  - PACKET_COUNT 200'e ayarlandı
+- multiclass_v2 model dosyaları Ubuntu'ya aktarıldı (`/home/intsec/models/multiclass_v2/`)
+- pipeline.py Ubuntu'ya aktarıldı (`/home/intsec/pipeline.py`)
+- Windows Firewall'a ES-9200 kuralı eklendi (admin terminal ile)
+- Kali'den hping3 flood saldırısı yapıldı → pipeline **DoS/DDoS doğru tespit etti** (~%90+)
+- Kali'den nping ile farklı tool testi yapıldı → yine DoS/DDoS tespit edildi
+- Port Scan (nmap -sS -p 1-1000) → çoğunlukla DoS/DDoS, 1 adet Port Scan (confidence 0.5)
+- Kibana'da pie chart oluşturuldu: Aggregation based → Pie → attack_type.keyword
+- Dashboard oluşturuldu, pie chart + discover yan yana
+- Port Scan için büyük PCAP (131k paket) alındı ama NTLFlowLyzer CPU soft lockup yaptı — iptal edildi
+
+**Öğrenilen Dersler:**
+- hping3 flood Ubuntu'nun ağını kilitleyebiliyor → kısa tutmak lazım (5-10 sn)
+- NTLFlowLyzer 131k paket için 20+ dakika sürüyor ve CPU'yu kilitledi → PCAP küçük tutulmalı
+- Ping (ICMP) Windows Firewall tarafından bloke ediliyor ama TCP 9200 çalışıyor
+
+**Yapılacaklar (Semih için):**
+- Port Scan, Brute Force, Web Attack, Botnet için ayrı CSV'ler üretilecek
+- Bu CSV'lerle model yeniden eğitilecek
+- Bunun için küçük PCAP alınıp NTLFlowLyzer ile işlenecek
+
+**Ubuntu IP (2026-04-06):** `192.168.1.17`
+**Windows IP (2026-04-06):** `192.168.1.16`
+
+---
+
 ### 2026-04-02/03 (Session 3 — Büyük Sprint)
 **Yapılanlar:**
 - Kibana `@timestamp` sorunu çözüldü (alan adı `timestamp`→`@timestamp` düzeltildi, index pattern yeniden oluşturuldu)
@@ -405,4 +478,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-03*
+*Son güncelleme: 2026-04-09*
