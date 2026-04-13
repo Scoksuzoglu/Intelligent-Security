@@ -9,7 +9,7 @@ from elasticsearch import Elasticsearch
 # --- Konfigürasyon ---
 ES_HOST       = "http://192.168.1.16:9200"   # Her oturumda Windows IP'sini kontrol et!
 ES_INDEX      = "intsec-predictions"
-MODEL_DIR     = "/home/intsec/models/multiclass_v3"
+MODEL_DIR     = "/home/intsec/models/multiclass_v4"
 INTERFACE     = "enp0s3"
 PCAP_PATH     = "/tmp/capture.pcap"
 CSV_PATH      = "/tmp/capture.csv"
@@ -122,12 +122,12 @@ FEATURES_IGNORE_LIST = [
 ]
 
 # --- Model yükle ---
-print("[*] Model yukleniyor (multiclass_v3)...")
-model    = joblib.load(f"{MODEL_DIR}/model3.joblib")
-scaler   = joblib.load(f"{MODEL_DIR}/scaler3.joblib")
-with open(f"{MODEL_DIR}/feature_names3.json") as f:
+print("[*] Model yukleniyor (multiclass_v4)...")
+model    = joblib.load(f"{MODEL_DIR}/model4.joblib")
+scaler   = joblib.load(f"{MODEL_DIR}/scaler4.joblib")
+with open(f"{MODEL_DIR}/feature_names4.json") as f:
     features = json.load(f)
-with open(f"{MODEL_DIR}/metadata3.json") as f:
+with open(f"{MODEL_DIR}/metadata4.json") as f:
     metadata = json.load(f)
 classes = metadata["class_names"]
 es = Elasticsearch([ES_HOST])
