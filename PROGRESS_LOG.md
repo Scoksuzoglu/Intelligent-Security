@@ -366,6 +366,60 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
+### 2026-04-13 (Session 8 — multiclass_v4 Deploy + Kibana Alarm Sistemi)
+
+**Yapılanlar:**
+
+**Model 4 Ubuntu'ya Deploy:**
+- `multiclass_v4` modeli eğitildi (Semih tarafından):
+  - 6 sınıf: Benign, DoS/DDoS, Web Attack, Port Scan, Brute Force, Botnet
+  - Test Accuracy: **%99.85**, F1: %99.85
+  - 903.622 örnek, 30 feature, RandomForest (100 estimator, max_depth=20, class_weight=balanced)
+  - Gerçek Kali Brute Force verisi eklendi (1.942 flow) + Port Scan (24.887 flow)
+- Model dosyaları (`model4.joblib`, `scaler4.joblib`, `feature_names4.json`, `metadata4.json`) Windows'tan SCP ile Ubuntu'ya aktarıldı:
+  - Hedef: `/home/intsec/models/multiclass_v4/`
+- `pipeline.py` multiclass_v4 kullanacak şekilde güncellendi:
+  - `MODEL_DIR = "/home/intsec/models/multiclass_v4"`
+  - ES_HOST: `192.168.1.200` (Windows Wi-Fi IP)
+  - PACKET_COUNT: 200 → **50** (daha hızlı döngü)
+  - ES client: `request_timeout=30, max_retries=3, retry_on_timeout=True` eklendi
+  - Temp dosya silme: `os.remove()` → `subprocess.run(["sudo", "rm", "-f", p])` (root owned pcap fix)
+- Ubuntu'da sudoers güncellendi: `intsec ALL=(ALL) NOPASSWD: ALL`
+- Pipeline test edildi: DoS/DDoS ve Port Scan başarıyla tespit edildi
+
+**Saldırı Testleri:**
+- `sudo hping3 -S -p 80 --flood 192.168.1.203` → **DoS/DDoS** doğru tespit
+- `nmap -sS -p- 192.168.1.203` → **Port Scan** doğru tespit
+- `hydra -l root -P rockyou.txt ssh://192.168.1.203` → Brute Force tespiti zayıf (çoğu Benign çıktı)
+  - **Sebep:** 1.942 Brute Force flow az, Hydra SSH pattern'i eğitim verisinden farklı
+  - **Çözüm:** Hydra ile yeni SSH Brute Force PCAP alınıp model yeniden eğitilmeli
+
+**Kibana Alarm Sistemi:**
+- `docker-compose.yml`'e Kibana encryption key eklendi (alerting için zorunlu):
+  ```
+  XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+  XPACK_REPORTING_ENCRYPTIONKEY
+  XPACK_SECURITY_ENCRYPTIONKEY
+  ```
+- Kibana container `--force-recreate` ile yeniden oluşturuldu
+- **INTSEC Attack Alert** kuralı oluşturuldu:
+  - Type: Index threshold
+  - Index: `intsec-predictions`
+  - Condition: count > 0, grouped over `attack_type.keyword`, son 1 dakika
+  - Actions: Index connector (alert doc yazar) + Server log connector
+  - Test: DoS/DDoS saldırısında **Active** durumuna geçti ✓
+
+**IP Bilgileri (2026-04-13):**
+- Windows IP: `192.168.1.200` (Wi-Fi)
+- Ubuntu IP: `192.168.1.203`
+- Kali IP: `192.168.1.20`
+
+**Bilinen Sorunlar:**
+- Brute Force tespiti zayıf — SSH Hydra trafiği çoğunlukla Benign sınıflandırılıyor
+- ES bağlantısı ara sıra timeout (büyük flood sırasında) — retry mekanizması eklendi, otomatik devam ediyor
+
+---
+
 ### 2026-04-09 (Session 7 — multiclass_v3 Model Eğitimi)
 
 **Yapılanlar:**
@@ -499,4 +553,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-09*
+*Son güncelleme: 2026-04-13*
