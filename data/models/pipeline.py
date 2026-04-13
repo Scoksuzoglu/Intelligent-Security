@@ -7,14 +7,14 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 
 # --- Konfigürasyon ---
-ES_HOST       = "http://192.168.1.16:9200"   # Her oturumda Windows IP'sini kontrol et!
+ES_HOST       = "http://192.168.1.200:9200"   # Her oturumda Windows IP'sini kontrol et!
 ES_INDEX      = "intsec-predictions"
 MODEL_DIR     = "/home/intsec/models/multiclass_v4"
 INTERFACE     = "enp0s3"
 PCAP_PATH     = "/tmp/capture.pcap"
 CSV_PATH      = "/tmp/capture.csv"
 NTL_CONFIG    = "/home/intsec/ntl_config.json"
-PACKET_COUNT  = 200          # Her turda yakalanacak paket sayısı
+PACKET_COUNT  = 50           # Her turda yakalanacak paket sayısı
 
 # NTLFlowLyzer'ın çıkarmasına gerek olmayan feature'lar (sadece 30 feature kalsın → daha hızlı)
 FEATURES_IGNORE_LIST = [
@@ -130,7 +130,7 @@ with open(f"{MODEL_DIR}/feature_names4.json") as f:
 with open(f"{MODEL_DIR}/metadata4.json") as f:
     metadata = json.load(f)
 classes = metadata["class_names"]
-es = Elasticsearch([ES_HOST])
+es = Elasticsearch([ES_HOST], request_timeout=30, max_retries=3, retry_on_timeout=True)
 print(f"[*] Model hazir. Siniflar: {list(classes.values())}")
 print("[*] Trafik izleniyor...\n")
 
@@ -227,7 +227,7 @@ while True:
         # Gecici dosyalari temizle
         for p in set([PCAP_PATH, CSV_PATH] + glob.glob("/tmp/*.csv")):
             if os.path.exists(p):
-                os.remove(p)
+                subprocess.run(["sudo", "rm", "-f", p])
         print()
     except KeyboardInterrupt:
         print("\n[*] Durduruluyor...")
