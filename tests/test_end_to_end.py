@@ -38,14 +38,16 @@ def test_full_pipeline(pcap_file):
     # Step 4: Log Results (Semih İkbal)
     print("\n📝 STEP 4: Logging Results")
     
-    for i in range(min(len(results['attack_types']), len(metadata) if metadata is not None else 0)):
-        if metadata is not None:
-            log_prediction(
-                src_ip=metadata.iloc[i]['src_ip'],
-                dst_ip=metadata.iloc[i]['dst_ip'],
-                attack_type=results['attack_types'][i],
-                confidence=results['confidence'][i]
-            )
+    n_to_log = len(results['attack_types'])
+    for i in range(n_to_log):
+        src_ip = metadata.iloc[i]['src_ip'] if (metadata is not None and 'src_ip' in metadata.columns) else 'unknown'
+        dst_ip = metadata.iloc[i]['dst_ip'] if (metadata is not None and 'dst_ip' in metadata.columns) else 'unknown'
+        log_prediction(
+            src_ip=src_ip,
+            dst_ip=dst_ip,
+            attack_type=results['attack_types'][i],
+            confidence=results['confidence'][i]
+        )
     
     # Summary
     print("\n" + "="*60)

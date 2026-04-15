@@ -1,0 +1,7 @@
+[
+  "flow_id",
+  "timestamp",
+  "src_ip",
+  "dst_ip",
+  "protocol"
+]

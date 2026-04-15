@@ -184,11 +184,11 @@ import pandas as pd, numpy as np, joblib, json
 from datetime import datetime
 from elasticsearch import Elasticsearch
 
-model = joblib.load('data/models/multiclass_v1/model.joblib')
-scaler = joblib.load('data/models/multiclass_v1/scaler.joblib')
-with open('data/models/multiclass_v1/feature_names.json') as f:
+model = joblib.load('data/models/multiclass_v2/model.joblib')
+scaler = joblib.load('data/models/multiclass_v2/scaler.joblib')
+with open('data/models/multiclass_v2/feature_names.json') as f:
     features = json.load(f)
-with open('data/models/multiclass_v1/metadata.json') as f:
+with open('data/models/multiclass_v2/metadata.json') as f:
     metadata = json.load(f)
 classes = metadata['class_names']
 
@@ -309,7 +309,7 @@ streamlit run src/dashboard/app.py   # opsiyonel
 | ES Writer | `src/dashboard/elasticsearch_writer.py` |
 | ES Reader (yapılacak) | `src/dashboard/elasticsearch_reader.py` |
 | File Watcher | `src/watcher/file_watcher.py` |
-| Model | `data/models/multiclass_v1/` |
+| Model | `data/models/multiclass_v2/` |
 | İşlenmiş CSV'ler | `data/processed/` |
 | PCAP klasörü | `data/pcap/` |
 | ddos_flows.csv (gerçek saldırı) | `data/processed/ddos_flows.csv` (42MB) |
@@ -367,46 +367,153 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ## Session Geçmişi
 
-### 2026-04-04 (Session 4 — Real-Time Pipeline)
+### 2026-04-13 (Session 8 — multiclass_v4 Deploy + Kibana Alarm Sistemi)
 
 **Yapılanlar:**
-- Ubuntu ve Windows IP'leri değişmişti (DHCP): Ubuntu → `192.168.1.17`, Windows → `192.168.1.16`
-- Windows Firewall'da port 9200 açıldı (Elasticsearch dışarıya erişilebilir oldu)
-- Docker `0.0.0.0:9200:9200` olarak güncellendi (dışarıdan erişim için)
-- Model dosyaları Windows'tan Ubuntu'ya aktarıldı (`/home/intsec/models/multiclass_v1/`)
-- Ubuntu'ya `pandas`, `scikit-learn`, `elasticsearch`, NTLFlowLyzer bağımlılıkları kuruldu (hem intsec hem root için)
-- `data/models/pipeline.py` yazıldı — Ubuntu'da çalışan real-time pipeline:
-  - tcpdump ile paket yakalar
-  - NTLFlowLyzer ile PCAP → CSV
-  - Model tahmin yapar
-  - Windows ES'e (`http://192.168.1.16:9200`) yazar
-- Pipeline test edildi: 49.952 kayıt ES'e yazıldı, Kibana'da görüntülendi
 
-**Keşfedilen Kritik Sorun — NTLFlowLyzer Real-Time İçin Uygun Değil:**
-- NTLFlowLyzer her çalıştığında Python modüllerini sıfırdan yüklüyor
-- 100 paket için de 50.000 paket için de başlama süresi aynı (~1-2 dakika)
-- Bu tool batch işleme için tasarlanmış, streaming/real-time için değil
-- Gerçek near real-time mümkün değil NTLFlowLyzer ile
+**Model 4 Ubuntu'ya Deploy:**
+- `multiclass_v4` modeli eğitildi (Semih tarafından):
+  - 6 sınıf: Benign, DoS/DDoS, Web Attack, Port Scan, Brute Force, Botnet
+  - Test Accuracy: **%99.85**, F1: %99.85
+  - 903.622 örnek, 30 feature, RandomForest (100 estimator, max_depth=20, class_weight=balanced)
+  - Gerçek Kali Brute Force verisi eklendi (1.942 flow) + Port Scan (24.887 flow)
+- Model dosyaları (`model4.joblib`, `scaler4.joblib`, `feature_names4.json`, `metadata4.json`) Windows'tan SCP ile Ubuntu'ya aktarıldı:
+  - Hedef: `/home/intsec/models/multiclass_v4/`
+- `pipeline.py` multiclass_v4 kullanacak şekilde güncellendi:
+  - `MODEL_DIR = "/home/intsec/models/multiclass_v4"`
+  - ES_HOST: `192.168.1.200` (Windows Wi-Fi IP)
+  - PACKET_COUNT: 200 → **50** (daha hızlı döngü)
+  - ES client: `request_timeout=30, max_retries=3, retry_on_timeout=True` eklendi
+  - Temp dosya silme: `os.remove()` → `subprocess.run(["sudo", "rm", "-f", p])` (root owned pcap fix)
+- Ubuntu'da sudoers güncellendi: `intsec ALL=(ALL) NOPASSWD: ALL`
+- Pipeline test edildi: DoS/DDoS ve Port Scan başarıyla tespit edildi
 
-**Çözüm Planı — Scapy Tabanlı Live Feature Extractor:**
-- NTLFlowLyzer tamamen kaldırılacak
-- Scapy ile ağ arayüzü canlı dinlenecek
-- Her N saniyede flow feature'ları Python ile hesaplanacak (aynı 30 feature)
-- Model anında tahmin yapacak, ES'e yazacak
-- Beklenen döngü süresi: 5-10 saniye
-- **NOT:** Feature hesaplamalarının NTLFlowLyzer ile birebir uyumlu olması lazım, yoksa model yanlış tahmin yapar. Semih modeli yeniden eğitince bu uyum da test edilmeli.
-- `data/models/pipeline.py` güncellenmesi gerekiyor
+**Saldırı Testleri:**
+- `sudo hping3 -S -p 80 --flood 192.168.1.203` → **DoS/DDoS** doğru tespit
+- `nmap -sS -p- 192.168.1.203` → **Port Scan** doğru tespit
+- `hydra -l root -P rockyou.txt ssh://192.168.1.203` → Brute Force tespiti zayıf (çoğu Benign çıktı)
+  - **Sebep:** 1.942 Brute Force flow az, Hydra SSH pattern'i eğitim verisinden farklı
+  - **Çözüm:** Hydra ile yeni SSH Brute Force PCAP alınıp model yeniden eğitilmeli
 
-**Ubuntu'da Kurulu Olan Şeyler (2026-04-04 itibarıyla):**
-- Python3, pip3, tcpdump, git
-- NTLFlowLyzer (hem intsec user hem root için kurulu)
-- scikit-learn 1.7.2, pandas, elasticsearch, joblib
-- Model dosyaları: `/home/intsec/models/multiclass_v1/`
-- Pipeline script: `/home/intsec/pipeline.py`
+**Kibana Alarm Sistemi:**
+- `docker-compose.yml`'e Kibana encryption key eklendi (alerting için zorunlu):
+  ```
+  XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+  XPACK_REPORTING_ENCRYPTIONKEY
+  XPACK_SECURITY_ENCRYPTIONKEY
+  ```
+- Kibana container `--force-recreate` ile yeniden oluşturuldu
+- **INTSEC Attack Alert** kuralı oluşturuldu:
+  - Type: Index threshold
+  - Index: `intsec-predictions`
+  - Condition: count > 0, grouped over `attack_type.keyword`, son 1 dakika
+  - Actions: Index connector (alert doc yazar) + Server log connector
+  - Test: DoS/DDoS saldırısında **Active** durumuna geçti ✓
 
-**ÖNEMLİ — IP Adresleri DHCP ile değişiyor:**
-- Her oturumda `ipconfig` (Windows) ve `ip addr show` (Ubuntu) ile IP'leri kontrol et
-- `pipeline.py` içindeki `ES_HOST` değişkenini güncelle
+**IP Bilgileri (2026-04-13):**
+- Windows IP: `192.168.1.200` (Wi-Fi)
+- Ubuntu IP: `192.168.1.203`
+- Kali IP: `192.168.1.20`
+
+**Bilinen Sorunlar:**
+- Brute Force tespiti zayıf — SSH Hydra trafiği çoğunlukla Benign sınıflandırılıyor
+- ES bağlantısı ara sıra timeout (büyük flood sırasında) — retry mekanizması eklendi, otomatik devam ediyor
+
+---
+
+### 2026-04-09 (Session 7 — multiclass_v3 Model Eğitimi)
+
+**Yapılanlar:**
+- `notebooks/05_train_multiclass_v3.ipynb` oluşturuldu ve Jupyter'da çalıştırıldı
+- multiclass_v2 verisi (876.793 satır) + `portscan_flows.csv` (24.887 gerçek nmap Port Scan flow) birleştirildi
+- `bwd_segment_size_mean` → `bwd_avg_segment_size` rename (NTLFlowLyzer uyumu)
+- Port Scan label = 3 olarak atandı (NTLFlowLyzer 'Unknown' üretiyor)
+- Aynı 30 feature, aynı RandomForest (100 estimator, max_depth=20, class_weight=balanced)
+- **multiclass_v3 sonuçları:**
+  - Toplam örnek: 901.680 (v2'ye +24.887)
+  - Port Scan örnekleri: 186.210 (161.323 CIC + 24.887 gerçek nmap)
+  - Test Accuracy: **%99.85** (v2: %99.83)
+  - F1 Score: **%99.86** (v2: %99.84)
+- Dosyalar: `data/models/multiclass_v3/model3.joblib`, `scaler3.joblib`, `feature_names3.json`, `metadata3.json`
+- pipeline.py güncellenmedi — v3 ayrı klasörde duruyor
+
+**Öğrenilen Dersler:**
+- Gerçek nmap verisi eklemek Port Scan tespitini iyileştirdi, genel accuracy da arttı
+
+---
+
+### 2026-04-09 (Session 6 — Port Scan CSV Üretimi + Pipeline Sorun Giderme)
+
+**Yapılanlar:**
+- Docker compose başlatıldı (ES + Kibana + Kafka ayağa kalktı)
+- Windows IP değişmişti: `192.168.1.16` → `192.168.1.198` (Wi-Fi)
+- Ubuntu IP bu oturumda: `192.168.1.200`
+- Ubuntu'da `pipeline.py` güncellendi: `sed -i 's/192.168.1.16/192.168.1.198/g'`
+- Ubuntu'da python3 kurulu değildi (VM muhtemelen önceki snapshot'a dönmüş):
+  - `sudo apt install -y python3 python3-pip`
+  - `pip3 install elasticsearch pandas scikit-learn joblib numpy`
+- `/home/intsec/ntl_config.json` permission hatası → `sudo chmod 666` ile düzeltildi
+- `/tmp/capture.pcap` permission hatası → `sudo chmod 777 /tmp` veya `setcap` ile düzeltildi
+- Pipeline başlatıldı → Kali saldırmadan bile DoS/DDoS trafik Kibana'ya düşmeye başladı (pipeline çalışıyor)
+- **Port Scan CSV üretimi:**
+  - Ubuntu'da: `sudo tcpdump -i enp0s3 -w /tmp/portscan.pcap -c 50000`
+  - Kali'den: `sudo nmap -sS -p 1-65535 --min-rate 5000 192.168.1.200`
+  - NTLFlowLyzer: 50.000 paket → **24.887 flow** → `portscan_flows.csv`
+  - Windows'a SCP ile indirildi: `C:/Users/ahmet/Desktop/portscan_flows.csv`
+  - `portscan_flows.csv` Semih'e gönderildi → model v3 eğitimi için
+
+**Öğrenilen Dersler:**
+- VM yeniden başlatıldığında python3 kurulumu gidebilir (snapshot sorunu) — kurulumu tekrarlamak gerekiyor
+- `ntl_config.json` ve `/tmp` dizini için sudo gerekebilir
+- NTLFlowLyzer 50.000 paket için ~5 dakika sürüyor (131k'ya kıyasla makul)
+
+**Semih'e Gönderilen Dosyalar:**
+- `ddos_flows.csv` (42MB, hping3 DDoS — Session 3'te)
+- `portscan_flows.csv` (24.887 flow, nmap Port Scan — bu session)
+
+**Ubuntu IP (2026-04-09):** `192.168.1.200`
+**Windows IP (2026-04-09):** `192.168.1.198`
+
+---
+
+### 2026-04-06 (Session 5 — multiclass_v2 Test + Kibana Dashboard)
+
+**Yapılanlar:**
+- `oksuzoglu_04_04` branch'ine geçildi — Semih'in multiclass_v2 modeli incelendi
+- multiclass_v2 model bilgileri:
+  - RandomForestClassifier, 100 estimator, max_depth=20
+  - Test accuracy: %99.83, F1: 0.9984
+  - 6 sınıf: Benign, DoS/DDoS, Web Attack, Port Scan, Brute Force, Botnet
+  - 116 feature → 30 feature seçimi
+- `data/models/pipeline.py` güncellendi:
+  - `multiclass_v1` → `multiclass_v2`
+  - NTLFlowLyzer config'e `features_ignore_list` eklendi (daha hızlı çalışması için)
+  - `bwd_segment_size_mean → bwd_avg_segment_size` rename düzeltildi
+  - PACKET_COUNT 200'e ayarlandı
+- multiclass_v2 model dosyaları Ubuntu'ya aktarıldı (`/home/intsec/models/multiclass_v2/`)
+- pipeline.py Ubuntu'ya aktarıldı (`/home/intsec/pipeline.py`)
+- Windows Firewall'a ES-9200 kuralı eklendi (admin terminal ile)
+- Kali'den hping3 flood saldırısı yapıldı → pipeline **DoS/DDoS doğru tespit etti** (~%90+)
+- Kali'den nping ile farklı tool testi yapıldı → yine DoS/DDoS tespit edildi
+- Port Scan (nmap -sS -p 1-1000) → çoğunlukla DoS/DDoS, 1 adet Port Scan (confidence 0.5)
+- Kibana'da pie chart oluşturuldu: Aggregation based → Pie → attack_type.keyword
+- Dashboard oluşturuldu, pie chart + discover yan yana
+- Port Scan için büyük PCAP (131k paket) alındı ama NTLFlowLyzer CPU soft lockup yaptı — iptal edildi
+
+**Öğrenilen Dersler:**
+- hping3 flood Ubuntu'nun ağını kilitleyebiliyor → kısa tutmak lazım (5-10 sn)
+- NTLFlowLyzer 131k paket için 20+ dakika sürüyor ve CPU'yu kilitledi → PCAP küçük tutulmalı
+- Ping (ICMP) Windows Firewall tarafından bloke ediliyor ama TCP 9200 çalışıyor
+
+**Yapılacaklar (Semih için):**
+- Port Scan, Brute Force, Web Attack, Botnet için ayrı CSV'ler üretilecek
+- Bu CSV'lerle model yeniden eğitilecek
+- Bunun için küçük PCAP alınıp NTLFlowLyzer ile işlenecek
+
+**Ubuntu IP (2026-04-06):** `192.168.1.17`
+**Windows IP (2026-04-06):** `192.168.1.16`
+
+---
 
 ### 2026-04-02/03 (Session 3 — Büyük Sprint)
 **Yapılanlar:**
@@ -447,4 +554,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
-*Son güncelleme: 2026-04-04*
+*Son güncelleme: 2026-04-13*

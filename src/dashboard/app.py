@@ -20,11 +20,11 @@ st.set_page_config(
 # Model ve feature bilgilerini yükle
 @st.cache_resource
 def load_model():
-    model = joblib.load('data/models/multiclass_v1/model.joblib')
-    scaler = joblib.load('data/models/multiclass_v1/scaler.joblib')
-    with open('data/models/multiclass_v1/feature_names.json') as f:
+    model = joblib.load('data/models/multiclass_v2/model.joblib')
+    scaler = joblib.load('data/models/multiclass_v2/scaler.joblib')
+    with open('data/models/multiclass_v2/feature_names.json') as f:
         features = json.load(f)
-    with open('data/models/multiclass_v1/metadata.json') as f:
+    with open('data/models/multiclass_v2/metadata.json') as f:
         metadata = json.load(f)
     return model, scaler, features, metadata
 

@@ -30,9 +30,9 @@ FEATURES_IGNORE_LIST = [
     'bwd_payload_bytes_median', 'bwd_payload_bytes_skewness', 'bwd_payload_bytes_cov', 'bwd_payload_bytes_mode',
     'total_header_bytes', 'std_header_bytes', 'median_header_bytes', 'skewness_header_bytes',
     'cov_header_bytes', 'mode_header_bytes', 'variance_header_bytes',
-    'fwd_total_header_bytes', 'fwd_max_header_bytes', 'fwd_std_header_bytes', 'fwd_median_header_bytes',
+    'fwd_std_header_bytes', 'fwd_median_header_bytes',
     'fwd_skewness_header_bytes', 'fwd_cov_header_bytes', 'fwd_mode_header_bytes', 'fwd_variance_header_bytes',
-    'bwd_total_header_bytes', 'bwd_max_header_bytes', 'bwd_min_header_bytes', 'bwd_mean_header_bytes',
+    'bwd_total_header_bytes', 'bwd_max_header_bytes', 'bwd_min_header_bytes',
     'bwd_std_header_bytes', 'bwd_median_header_bytes', 'bwd_skewness_header_bytes',
     'bwd_cov_header_bytes', 'bwd_mode_header_bytes', 'bwd_variance_header_bytes',
     'fwd_segment_size_mean', 'fwd_segment_size_max', 'fwd_segment_size_min', 'fwd_segment_size_std',
@@ -75,7 +75,7 @@ FEATURES_IGNORE_LIST = [
     'bwd_urg_flag_percentage_in_bwd_packets', 'bwd_ece_flag_percentage_in_bwd_packets',
     'bwd_syn_flag_percentage_in_bwd_packets', 'bwd_ack_flag_percentage_in_bwd_packets',
     'bwd_cwr_flag_percentage_in_bwd_packets', 'bwd_rst_flag_percentage_in_bwd_packets',
-    'packet_IAT_std', 'packet_IAT_max', 'packets_IAT_median', 'packets_IAT_skewness',
+    'packet_IAT_std', 'packets_IAT_median', 'packets_IAT_skewness',
     'packets_IAT_cov', 'packets_IAT_mode', 'packets_IAT_variance',
     'fwd_packets_IAT_std', 'fwd_packets_IAT_median', 'fwd_packets_IAT_skewness',
     'fwd_packets_IAT_cov', 'fwd_packets_IAT_mode', 'fwd_packets_IAT_variance',
@@ -207,9 +207,17 @@ class PCAPProcessor:
         print(f"  Config: {config_name}")
 
         # Run NTFlowLyzer
+        import sys
+        ntl_candidates = [
+            str(Path(sys.executable).parent / "ntlflowlyzer.exe"),
+            str(Path(sys.executable).parent / "Scripts" / "ntlflowlyzer.exe"),
+            "ntlflowlyzer",
+        ]
+        ntl_exe = next((c for c in ntl_candidates if Path(c).exists()), "ntlflowlyzer")
+
         try:
             result = subprocess.run(
-                ["ntlflowlyzer", "-c", config_name],
+                [ntl_exe, "-c", config_name],
                 capture_output=True,
                 text=True,
                 timeout=300
