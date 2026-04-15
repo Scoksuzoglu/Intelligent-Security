@@ -252,16 +252,17 @@ Sonra Kibana → Stack Management → Index Patterns → `intsec-predictions`'ı
 ## Devam Eden / Eksik Görevler
 
 ### Ahmet'in Görevleri
-- [ ] **ÖNCELİK 4 — Kibana Donut Chart** (Donut chart var ama dashboard'a eklenmedi)
+- [ ] **ÖNCELİK 1 — Scapy Tabanlı Real-Time Pipeline**
+  - `data/models/pipeline.py` tamamen yeniden yazılacak
+  - NTLFlowLyzer kaldırılacak, Scapy ile canlı paket yakalanacak
+  - 30 feature Scapy ile hesaplanacak (IAT, packet rate, header bytes vs.)
+  - Her 5-10 saniyede ES'e yazılacak
+  - Semih modeli yeniden eğitince feature uyumu test edilmeli
+
+- [ ] **ÖNCELİK 2 — Kibana Donut Chart** (Donut chart var ama dashboard'a eklenmedi)
   - Kibana → Visualize Library → Create Visualization → "Pie"
   - Index: `intsec-predictions`, Slice by: `attack_type.keyword`
   - Donut modunu aç, kaydet: "Saldiri Tipi Dagilimi"
-
-- [ ] **ÖNCELİK 5 — Streamlit Elasticsearch Entegrasyonu**
-  - `src/dashboard/elasticsearch_reader.py` yazılacak
-  - `fetch_predictions(limit=200)` fonksiyonu — ES'ten okuyacak
-  - `app.py`'de CSV yerine bu kullanılacak
-  - Eklenecek grafikler: Line chart (7 günlük trend), Bar chart (Top 10 IP)
 
 ### Semih'in Görevleri
 - [ ] **KRİTİK — Modeli yeniden eğit**
