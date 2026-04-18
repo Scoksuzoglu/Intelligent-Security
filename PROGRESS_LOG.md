@@ -355,7 +355,12 @@ streamlit run src/dashboard/app.py   # opsiyonel
 - [x] VM'ler arası saldırı PCAP'i alınabiliyor
 - [x] Pipeline uçtan uca çalışıyor (PCAP → NTLFlowLyzer → Model → ES → Kibana)
 - [x] Kibana'da veriler görünüyor
-- [ ] Model gerçek PCAP'ten DDoS'u doğru tespit ediyor (Semih halledecek)
+- [x] Model gerçek PCAP'ten DDoS'u doğru tespit ediyor
+- [x] Brute Force verisi üretildi (50k flow, Hydra SSH)
+- [x] Web Attack verisi üretildi (17k flow, Nikto)
+- [x] multiclass_v5 eğitildi (Brute Force iyileşti: F1 0.89→1.00)
+- [x] multiclass_v6 eğitildi (Web Attack iyileşti: F1 0.89→0.98)
+- [ ] multiclass_v6 Ubuntu'ya deploy edildi
 - [ ] Kibana donut chart dashboard'a eklendi
 - [ ] Streamlit alarm veriyor (ES'ten okuması lazım)
 - [ ] `docker-compose up -d` ile her şey ayağa kalkıyor
@@ -366,6 +371,93 @@ streamlit run src/dashboard/app.py   # opsiyonel
 ---
 
 ## Session Geçmişi
+
+### 2026-04-17/18 (Session 9 — VM Kurulumu + Saldırı Verisi Üretimi + multiclass_v5/v6)
+
+**Yapılanlar:**
+
+**VM Kurulumu (Semih'in Makinesinde Sıfırdan):**
+- VirtualBox zaten kuruluydu
+- **Ubuntu-INTSEC VM** kuruldu: ubuntu-22.04.5-live-server-amd64.iso
+  - RAM: 2048MB, Disk: 25GB, Bridge Adapter (MediaTek MT7921 Wi-Fi)
+  - Kullanıcı: `intsec` / `intsec123`, OpenSSH kurulu
+  - IP: `192.168.1.36`
+- **Kali-INTSEC VM** kuruldu: kali-linux-2025.1a-installer-amd64.iso
+  - RAM: 2048MB, Disk: 25GB, Bridge Adapter
+  - Kullanıcı: `kali` / `kali123`
+  - IP: `192.168.1.40`
+  - NOT: Kurulumda Güvenli Önyükleme kapalı olmalı, GRUB → /dev/sda seçilmeli
+
+**Ubuntu'ya Kurulan Araçlar:**
+```bash
+sudo apt update && sudo apt install -y python3 python3-pip tcpdump git apache2
+cd /tmp && git clone https://github.com/ahlashkari/NTLFlowLyzer.git
+cd /tmp/NTLFlowLyzer && pip3 install -r requirements.txt && pip3 install .
+echo 'export PATH=$PATH:/home/intsec/.local/bin' >> ~/.bashrc && source ~/.bashrc
+pip3 install elasticsearch pandas scikit-learn joblib numpy
+sudo dpkg-reconfigure keyboard-configuration  # Türkçe Q klavye
+```
+
+**Kali'ye Kurulan Araçlar:**
+```bash
+sudo apt install -y openssh-server
+sudo systemctl start ssh && sudo systemctl enable ssh
+sudo gunzip /usr/share/wordlists/rockyou.txt.gz
+```
+
+**Pipeline Kurulumu:**
+- multiclass_v4 dosyaları SCP ile Ubuntu'ya aktarıldı: `/home/intsec/models/multiclass_v4/`
+- `pipeline.py` Ubuntu'ya aktarıldı: `/home/intsec/pipeline.py`
+- `PACKET_COUNT` 50 → **500** yapıldı (daha iyi tespit için)
+- ES_HOST = Windows Wi-Fi IP (her oturumda değişiyor, kontrol et!)
+- sudoers: `intsec ALL=(ALL) NOPASSWD: ALL`
+- Windows Firewall'a 9200 portu açıldı
+
+**IP Bilgileri (2026-04-17/18):**
+- Windows IP: `192.168.1.38` (Wi-Fi, her oturumda değişebilir!)
+- Ubuntu IP: `192.168.1.36`
+- Kali IP: `192.168.1.40`
+
+**Brute Force Verisi Üretimi:**
+- Ubuntu'da otomatik kayıt scripti: `/home/intsec/capture_loop.sh`
+  - Her 120 saniyede Kali'den gelen paketleri yakalar → NTLFlowLyzer → CSV
+  - `nohup bash /home/intsec/capture_loop.sh > /home/intsec/capture.log 2>&1 &`
+- Kali'den Hydra SSH Brute Force:
+  - `hydra -l root -P /usr/share/wordlists/rockyou.txt -t 64 ssh://192.168.1.36`
+- Gece boyunca çalıştı → 1406 CSV, ~2M flow üretildi
+- Windows'a SCP ile indirildi, 50.000 satır alındı: `data/processed/bruteforce_50k.csv`
+- **NOT:** `/tmp` reboot'ta temizlenir, PCAP'leri `/home/intsec/` altına kaydet!
+
+**Web Attack Verisi Üretimi:**
+- Ubuntu'da Apache kuruldu (port 80)
+- Kali'den Nikto ile Web Attack: `nikto -h http://192.168.1.36` (16 kez çalıştırıldı)
+- NTLFlowLyzer ile işlendi → `webattack_all.csv` (~17k flow)
+- Windows'a aktarıldı: `data/processed/webattack_all.csv`
+
+**Model Eğitimleri:**
+- **multiclass_v5** (`notebooks/07_train_multiclass_v5.ipynb`):
+  - v4 verisi + `bruteforce_50k.csv` (50k Hydra SSH flow)
+  - Accuracy: %99.86, F1: %99.87
+  - Brute Force: precision 1.00, recall 1.00 (v4'te zayıftı)
+  - Kaydedildi: `data/models/multiclass_v5/`
+
+- **multiclass_v6** (`notebooks/08_train_multiclass_v6.ipynb`):
+  - v5 verisi + `webattack_all.csv` (17k Nikto flow)
+  - Accuracy: %99.87, F1: %99.87
+  - Web Attack: F1 0.89 → **0.98** (büyük iyileşme!)
+  - Kaydedildi: `data/models/multiclass_v6/`
+
+**Bilinen Sorunlar:**
+- Ubuntu disk dolabilir (12GB) — `df -h` ile kontrol et, gerekirse `/home/intsec/datasets/` sil
+- Brute Force (SSH yönetim trafiği) pipeline'da Brute Force olarak görünebilir — SSH bağlantısı olduğunda normal
+- Windows IP her oturumda değişiyor — `ipconfig` ile kontrol et, `sed -i` ile pipeline.py'yi güncelle
+
+**Yapılacaklar:**
+- [ ] multiclass_v6 Ubuntu'ya deploy et
+- [ ] pipeline.py'yi v6 kullanacak şekilde güncelle
+- [ ] Pipeline ile v6 modeli test et (DDoS, Port Scan, Brute Force, Web Attack)
+
+---
 
 ### 2026-04-13 (Session 8 — multiclass_v4 Deploy + Kibana Alarm Sistemi)
 
@@ -555,3 +647,4 @@ streamlit run src/dashboard/app.py   # opsiyonel
 ---
 
 *Son güncelleme: 2026-04-13*
+-
