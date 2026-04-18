@@ -452,10 +452,34 @@ sudo gunzip /usr/share/wordlists/rockyou.txt.gz
 - Brute Force (SSH yönetim trafiği) pipeline'da Brute Force olarak görünebilir — SSH bağlantısı olduğunda normal
 - Windows IP her oturumda değişiyor — `ipconfig` ile kontrol et, `sed -i` ile pipeline.py'yi güncelle
 
+**v6 Deploy ve Test Sonuçları (2026-04-18):**
+- Ubuntu statik IP: `192.168.1.100` (artık değişmiyor)
+- multiclass_v6 Ubuntu'ya deploy edildi: `/home/intsec/models/multiclass_v6/`
+- pipeline.py güncellendi: Windows IP otomatik bulma + v6 model dosyaları
+- ES_HOST Windows IP'si manuel güncellenmeli: `sed -i 's|eski_ip:9200|yeni_ip:9200|' /home/intsec/pipeline.py`
+
+**Gerçek Saldırı Test Sonuçları (multiclass_v6):**
+
+| Saldırı | Araç | Pipeline Sonucu | Başarı |
+|---------|------|----------------|--------|
+| DDoS | hping3 --faster | Çoğunlukla Benign | ✗ Başarısız |
+| Port Scan | nmap -sS -p 1-65535 | Port Scan: 163, Benign: 59 | ✓ Başarılı |
+| Brute Force | hydra -t 16 | DoS/DDoS: 5, Benign: 163, Port Scan: 1 | ✗ Başarısız |
+| Web Attack | nikto | Benign: 141, DoS/DDoS: 6, Port Scan: 3 | ✗ Başarısız |
+
+**Sorun Analizi:**
+- Port Scan dışında tüm saldırılar çoğunlukla Benign olarak sınıflandırılıyor
+- Sebep: Model CIC-IDS2017 verisiyle eğitildi, o dataset farklı araçlar kullandı (LOIC, GoldenEye vs.)
+- Gerçek araç trafiği (hping3, hydra, nikto) eğitim verisindeki pattern'lerden farklı
+- Pipeline 500 paket yakalıyor, saldırı paketleri normal trafik ile karışıyor
+- **Çözüm:** Gerçek saldırı verileriyle modeli yeniden eğitmek gerekiyor (ddos_flows.csv, bruteforce_50k.csv, webattack_all.csv daha iyi entegre edilmeli)
+
 **Yapılacaklar:**
-- [ ] multiclass_v6 Ubuntu'ya deploy et
-- [ ] pipeline.py'yi v6 kullanacak şekilde güncelle
-- [ ] Pipeline ile v6 modeli test et (DDoS, Port Scan, Brute Force, Web Attack)
+- [ ] DDoS tespitini iyileştir — hping3 PCAP'lerinden yeni veri üret, modele ekle
+- [ ] Brute Force tespitini iyileştir — pipeline SSH yönetim trafiğini filtrele
+- [ ] Web Attack tespitini iyileştir — nikto verisi daha fazla çeşitlendirilmeli
+- [ ] Kibana donut chart dashboard'a eklendi
+- [ ] Streamlit alarm veriyor (ES'ten okuması lazım)
 
 ---
 

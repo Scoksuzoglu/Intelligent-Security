@@ -6,15 +6,33 @@ import joblib
 from datetime import datetime
 from elasticsearch import Elasticsearch
 
+# --- Windows IP otomatik bul (ARP tablosundan gateway'e en yakın host) ---
+def get_windows_ip():
+    try:
+        result = subprocess.run(['ip', 'route', 'get', '1'], capture_output=True, text=True)
+        gateway = result.stdout.split('via')[1].split()[0]
+        # ARP tablosunda gateway subnet'indeki Windows makinesini bul
+        arp = subprocess.run(['arp', '-n'], capture_output=True, text=True)
+        prefix = '.'.join(gateway.split('.')[:3])
+        for line in arp.stdout.splitlines():
+            if prefix in line and gateway not in line and 'incomplete' not in line:
+                ip = line.split()[0]
+                return ip
+    except Exception:
+        pass
+    return None
+
 # --- Konfigürasyon ---
-ES_HOST       = "http://192.168.1.200:9200"   # Her oturumda Windows IP'sini kontrol et!
+_win_ip = get_windows_ip()
+ES_HOST       = f"http://{_win_ip}:9200" if _win_ip else "http://192.168.1.100:9200"
+print(f"[*] Windows IP: {_win_ip} → ES_HOST: {ES_HOST}")
 ES_INDEX      = "intsec-predictions"
-MODEL_DIR     = "/home/intsec/models/multiclass_v4"
+MODEL_DIR     = "/home/intsec/models/multiclass_v6"
 INTERFACE     = "enp0s3"
 PCAP_PATH     = "/tmp/capture.pcap"
 CSV_PATH      = "/tmp/capture.csv"
 NTL_CONFIG    = "/home/intsec/ntl_config.json"
-PACKET_COUNT  = 50           # Her turda yakalanacak paket sayısı
+PACKET_COUNT  = 500          # Her turda yakalanacak paket sayısı
 
 # NTLFlowLyzer'ın çıkarmasına gerek olmayan feature'lar (sadece 30 feature kalsın → daha hızlı)
 FEATURES_IGNORE_LIST = [
