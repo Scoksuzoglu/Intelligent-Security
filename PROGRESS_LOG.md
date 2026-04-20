@@ -670,5 +670,144 @@ sudo gunzip /usr/share/wordlists/rockyou.txt.gz
 
 ---
 
-*Son güncelleme: 2026-04-13*
--
+*Son güncelleme: 2026-04-20*
+
+---
+
+### 2026-04-19/20 (Session 10 — Domain Shift Çözümü + Model v7–v12)
+
+**Ana Problem:** Model CIC-IDS2017 verisiyle eğitilmişti ama gerçek araç trafiği (hping3, hydra, nikto) tamamen farklı feature pattern'leri üretiyor. Bu "domain shift" problemi nedeniyle model gerçek saldırıları tanıyamıyordu.
+
+**Çözüm Stratejisi:** Her saldırı türü için pipeline'dan gerçek veri topla, CIC verisini çıkar, kendi verini koy.
+
+---
+
+**Feature Analizi (`notebooks/09_feature_analysis.ipynb`):**
+- Gerçek Hydra BF: `bwd_*` featurelar tümü 0 (tek yönlü SSH), CIC BF'de çift yönlü
+- Gerçek Nikto WA: `packets_rate` 1838x daha yüksek CIC WA'ya göre
+- Gerçek hping3 DDoS: farklı paket boyutu ve IAT dağılımı
+- **Sonuç:** CIC verisi gerçek araçlarla eğitim için kullanılamaz
+
+---
+
+**Veri Toplama — Pipeline Capture Scriptleri:**
+
+Ubuntu'da çalışan veri toplama scriptleri oluşturuldu. Her script `/tmp/capture.csv` dosyasının değiştiğini `stat -c %Y` ile izleyip kopyasını alıyor:
+
+```bash
+# Örnek: collect_bf_data.sh (aynı mantık ddos ve wa için)
+while true; do
+    if [ -f /tmp/capture.csv ]; then
+        CURRENT_MOD=$(stat -c %Y /tmp/capture.csv)
+        if [ "$CURRENT_MOD" != "$LAST_MODIFIED" ]; then
+            cp /tmp/capture.csv "$OUTPUT_DIR/xxx_$COUNTER.csv"
+            COUNTER=$((COUNTER + 1))
+            LAST_MODIFIED=$CURRENT_MOD
+        fi
+    fi
+    sleep 0.5
+done
+```
+
+**Toplanan veri:**
+| Saldırı | Script | Dosya Sayısı | Flow Sayısı | Klasör |
+|---------|--------|-------------|-------------|--------|
+| Brute Force (Hydra SSH) | collect_bf_data.sh | 574 | 5.568 | data/processed/bf_captures/ |
+| Web Attack (Nikto) | collect_wa_data.sh | ~200+ | 5.105 | data/processed/wa_captures/ |
+| DDoS (hping3) | collect_ddos_data.sh | 652 | ~110.000 | data/processed/ddos_captures/ |
+
+**Not:** DDoS verisi çok fazla toplandı (110k), bu imbalance problemi yarattı (v11'de her şeyi DDoS dedi).
+
+---
+
+**Model Geliştirme Serisi:**
+
+**multiclass_v7** (`notebooks/10_train_multiclass_v7_xgboost.ipynb`):
+- v6 ile aynı veri, RandomForest → **XGBoost** geçiş
+- Accuracy: %99.87 — gerçek zamanlı tespit iyileşmedi
+- Kaydedildi: `data/models/multiclass_v7/`
+
+**multiclass_v8** (`notebooks/11_train_multiclass_v8.ipynb`):
+- CIC Brute Force (label=4, ~15k) kaldırıldı
+- `bf_captures/` (5.568 gerçek Hydra flow) eklendi
+- Accuracy: %99.87
+- **Gerçek zamanlı Brute Force: %100 tespit! (SÜPER)**
+- Kaydedildi: `data/models/multiclass_v8/`
+
+**multiclass_v9** (`notebooks/12_train_multiclass_v9.ipynb`):
+- CIC BF + CIC WA kaldırıldı
+- `wa_captures/` (5.105 gerçek Nikto flow) eklendi
+- Web Attack: **%100 tespit**
+- Brute Force: %75 (kısmen Web Attack ile karışıyor)
+- Kaydedildi: `data/models/multiclass_v9/`
+
+**multiclass_v10** (`notebooks/13_train_multiclass_v10.ipynb`):
+- CIC DDoS + BF + WA kaldırıldı
+- `ddos_flows.csv` (önceden toplanan 25k hping3 flow) eklendi
+- DDoS gerçek zamanlı hâlâ zayıf
+- Kaydedildi: `data/models/multiclass_v10/`
+
+**multiclass_v11** (`notebooks/14_train_multiclass_v11.ipynb`):
+- **Botnet sınıfı tamamen kaldırıldı** (gerçek botnet üretemiyoruz, 5 sınıfa düşüldü)
+- `ddos_captures/` (652 dosya, ~110k flow) eklendi
+- **Sorun:** Her şeyi DDoS tahmin etti — 110k DDoS vs 5k diğerleri, aşırı imbalance
+- Kaydedildi: `data/models/multiclass_v11/`
+
+**multiclass_v12** (`notebooks/15_train_multiclass_v12.ipynb`):
+- ddos_captures'dan sadece **10.000 satır** rastgele örneklendi (`DDOS_CAP = 10000`)
+- DDoS tespiti düzeldi
+- **Kalan sorun:** Web Attack saldırısının ~%50'si DDoS, ~%50'si Web Attack tahmin ediliyor
+- Kaydedildi: `data/models/multiclass_v12/`
+
+**multiclass_v13 (PLANLI):**
+- `DDOS_CAP = 5000` yapılacak (WA ~5k ile eşitlenecek)
+- Henüz eğitilmedi
+
+---
+
+**Pipeline Değişiklikleri:**
+- Ubuntu statik IP: `192.168.1.100`
+- Windows IP: `192.168.1.114` (her oturumda kontrol et!)
+- `timeout=30` subprocess call'a eklendi (NTLFlowLyzer takılması için)
+- `PACKET_COUNT = 500`
+- Şu an aktif model: `multiclass_v12`
+
+**Pipeline Başlatma:**
+```bash
+# Ubuntu SSH'da:
+python3 ~/pipeline.py
+
+# Windows'ta Docker (Kibana/ES):
+cd C:\Users\semih\Desktop\Git_projects\Intelligent-Security
+docker-compose up -d
+```
+
+---
+
+**Medusa Testi:**
+- Kali'den Medusa ile SSH Brute Force → **%100 Brute Force tespit** (Hydra gibi çalışıyor)
+
+**Güncel Gerçek Zamanlı Tespit Sonuçları (v12 ile):**
+| Saldırı | Araç | Sonuç |
+|---------|------|-------|
+| DDoS | hping3 --flood | ✓ DDoS tespit |
+| Port Scan | nmap -sS | ✓ Port Scan tespit |
+| Brute Force | Hydra / Medusa | ✓ %100 tespit |
+| Web Attack | Nikto | ~%50 Web Attack, ~%50 DDoS (imbalance sorunu devam ediyor) |
+
+---
+
+**IP Bilgileri (2026-04-20):**
+- Windows IP: `192.168.1.114`
+- Ubuntu IP: `192.168.1.100` (statik)
+- Kali IP: değişkenAktif
+
+**Yapılacaklar:**
+- [ ] **v13 eğit** — DDOS_CAP=5000, Web Attack tespitini düzelt
+- [ ] v13 Ubuntu'ya deploy et
+- [ ] Tüm saldırı türlerini test et
+- [ ] Kibana donut chart dashboard'a ekle
+- [ ] Streamlit alarm ES'ten okusun
+- [ ] Demo videosu
+- [ ] README güncelle
+- [ ] PowerPoint tamamla
