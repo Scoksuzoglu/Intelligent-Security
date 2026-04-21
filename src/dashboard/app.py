@@ -145,6 +145,7 @@ if mode == "🔴 Canlı (Elasticsearch)":
     )
     limit = st.sidebar.slider("Maksimum Kayıt", 100, 2000, 500)
 
+    auto_refresh = st.sidebar.checkbox("🔁 Otomatik Yenile (10s)", value=True)
     if st.sidebar.button("🔄 Yenile"):
         st.cache_data.clear()
 
@@ -169,9 +170,14 @@ if mode == "🔴 Canlı (Elasticsearch)":
         if df is None:
             st.error("Elasticsearch'ten veri çekilemedi.")
         elif df.empty:
-            st.info("Seçilen zaman aralığında kayıt yok. File watcher çalışıyor mu?")
+            st.info("Seçilen zaman aralığında kayıt yok. Pipeline çalışıyor mu?")
         else:
             render_dashboard(df, source_label=f"({time_window})")
+
+        if auto_refresh:
+            import time
+            time.sleep(10)
+            st.rerun()
 
 # ── CSV Analiz Modu ──────────────────────────────────────────────────────────
 else:

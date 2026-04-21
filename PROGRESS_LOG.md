@@ -802,12 +802,174 @@ docker-compose up -d
 - Ubuntu IP: `192.168.1.100` (statik)
 - Kali IP: değişkenAktif
 
-**Yapılacaklar:**
-- [ ] **v13 eğit** — DDOS_CAP=5000, Web Attack tespitini düzelt
-- [ ] v13 Ubuntu'ya deploy et
-- [ ] Tüm saldırı türlerini test et
+**Yapılacaklar (Session 10 sonu):**
+- [x] v13 eğitildi ve deploy edildi
+- [x] v14, v15 denendi (benign sorunu çözülemedi, v13'e dönüldü)
+- [x] Host-Only network kuruldu (internet bağımsız demo)
 - [ ] Kibana donut chart dashboard'a ekle
 - [ ] Streamlit alarm ES'ten okusun
 - [ ] Demo videosu
 - [ ] README güncelle
 - [ ] PowerPoint tamamla
+
+---
+
+### 2026-04-21 (Session 11 — Model v13–v15 + Host-Only Network)
+
+**Model Geliştirme:**
+
+**multiclass_v13** (`notebooks/16_train_multiclass_v13.ipynb`):
+- DDoS cap 5.000'e düşürüldü (v12'de 10k vardı, WA hâlâ DDoS ile karışıyordu)
+- Accuracy: %100 (offline)
+- Gerçek zamanlı: DDoS ✓, Port Scan ✓, Web Attack ✓, Brute Force ~%75-80
+- Kaydedildi: `data/models/multiclass_v13/`
+- **Aktif model — bu modelle devam ediliyor**
+
+**multiclass_v14** (`notebooks/17_train_multiclass_v14.ipynb`):
+- CIC Benign 20k'ya indirildi + `benign_captures/` (gerçek pipeline benign, ~7.4k) eklendi
+- **Sorun:** Her şeyi Benign tahmin etti (27k Benign vs 5k diğerleri)
+- Terk edildi
+
+**multiclass_v15** (`notebooks/18_train_multiclass_v15.ipynb`):
+- CIC Benign tamamen kaldırıldı, sadece `benign_captures/` 5k cap
+- CIC Port Scan kaldı, diğer tüm veriler pipeline capture'dan
+- **Sorun:** Pipeline Host-Only'e geçince interface sorunu nedeniyle test edilemedi tam
+- Kaydedildi: `data/models/multiclass_v15/`
+
+**Benign Veri Toplama:**
+- `collect_benign_data.sh` scripti oluşturuldu
+- Ubuntu'da curl/wget/apt döngüsüyle ~106 dosya, 7.826 flow toplandı
+- `data/processed/benign_captures/` klasörüne Windows'a SCP ile indirildi
+- Sonuç: Benign tespiti hâlâ sorunlu — domain shift problemi devam ediyor
+
+---
+
+**Host-Only Network Kurulumu (Okul Sunumu İçin):**
+
+Amaç: Okul internetine bağımlılığı kaldırmak. VirtualBox Host-Only ile internet olmadan demo yapılabilir.
+
+**Adımlar:**
+1. VirtualBox → Network Manager → Host-Only Adapter zaten mevcut: `192.168.56.1/24`
+2. Ubuntu VM → Adapter 2 → Host-Only Adapter eklendi
+3. Kali VM → Adapter 2 → Host-Only Adapter eklendi
+4. Ubuntu `/etc/netplan/00-installer-config.yaml` güncellendi:
+```yaml
+enp0s8:
+  dhcp4: no
+  addresses:
+    - 192.168.56.100/24
+```
+5. `sudo netplan apply` çalıştırıldı
+6. Kali DHCP ile `192.168.56.101` aldı (otomatik)
+7. pipeline.py INTERFACE `enp0s3` → `enp0s8` güncellendi
+8. ES_HOST fallback: `192.168.56.1:9200` (Windows Host-Only IP)
+
+**Host-Only IP Adresleri:**
+- Windows (host): `192.168.56.1`
+- Ubuntu: `192.168.56.100`
+- Kali: `192.168.56.101`
+
+**Bağlantı Komutları (internet olmadan):**
+```bash
+ssh intsec@192.168.56.100   # Ubuntu
+ssh kali@192.168.56.101     # Kali
+```
+
+**Saldırı Komutları (Host-Only IP ile):**
+```bash
+sudo hping3 --flood -S -p 80 192.168.56.100   # DDoS
+nmap -sS -p- 192.168.56.100                   # Port Scan
+nikto -h http://192.168.56.100                # Web Attack
+hydra -l root -P /usr/share/wordlists/rockyou.txt -t 16 -w 3 192.168.56.100 ssh  # BF
+```
+
+**Test Sonuçları (v13, Host-Only):**
+| Saldırı | Araç | Sonuç |
+|---------|------|-------|
+| DDoS | hping3 --flood -S | ✓ DoS/DDoS |
+| Port Scan | nmap -sS | ✓ Port Scan |
+| Web Attack | nikto | ✓ Web Attack |
+| Brute Force | hydra -t 16 | ~%75-80 Brute Force |
+
+**Sistem Başlatma (Sunum için):**
+```bash
+# Windows'ta:
+cd C:\Users\semih\Desktop\Git_projects\Intelligent-Security
+docker-compose up -d
+
+# Ubuntu SSH (Host-Only):
+ssh intsec@192.168.56.100
+python3 ~/pipeline.py
+
+# Kibana: http://localhost:5601
+```
+
+**Yapılacaklar (Session 11 sonu):**
+- [x] Kibana donut chart dashboard'a ekle
+- [ ] Streamlit alarm ES'ten okusun
+- [ ] Demo videosu
+- [ ] README güncelle
+- [ ] PowerPoint tamamla
+- [ ] (Opsiyonel) Daha fazla/çeşitli BF verisi toplayıp v16 eğit
+
+---
+
+### 2026-04-21 (Session 12 — Kibana Dashboard + Alert + Host-Only Network Fix)
+
+**Kibana Donut Chart:**
+- Kibana → Dashboard → "INTSEC Güvenlik Paneli" oluşturuldu
+- Aggregation based → Pie chart → `attack_type.keyword` Terms aggregation
+- Donut modu açıldı → "Saldırı Tipi Dağılımı" olarak kaydedildi
+- Dashboard'a eklendi, DDoS saldırısında %100 DoS/DDoS gösterdi ✓
+
+**Kibana Alert Kuralları (4 adet):**
+- Stack Management → Rules and Connectors → 4 Elasticsearch query rule oluşturuldu:
+  - `Ddos_query`: `{"query": {"term": {"attack_type.keyword": "DoS/DDoS"}}}`
+  - `Web_Attack_query`: `{"query": {"term": {"attack_type.keyword": "Web Attack"}}}`
+  - `Portscan_query`: `{"query": {"term": {"attack_type.keyword": "Port Scan"}}}`
+  - `Brute_Force_query`: `{"query": {"term": {"attack_type.keyword": "Brute Force"}}}`
+- Her biri 1 dakikada bir çalışıyor, Server log connector ile tetikleniyor
+- DDoS saldırısı sırasında `Ddos_query` **Active** durumuna geçti ✓
+- Diğerleri saldırı olmadığında **Ok** durumunda
+
+**Host-Only Network Yeniden Yapılandırma:**
+- Eski Host-Only adapter DHCP server adresi (192.168.56.100) Ubuntu IP'siyle çakışıyordu
+- SSH 192.168.56.100'e Windows'tan bağlanamıyordu (ping gidiyordu ama TCP timeout)
+- Çözüm: Yeni VirtualBox Host-Only Adapter oluşturuldu
+  - Windows adapter IP: `192.168.27.1`
+  - Ubuntu netplan güncellendi: `192.168.27.100/24`
+  - Kali `/etc/network/interfaces` güncellendi: `192.168.27.101/24` (statik)
+- SSH artık Wi-Fi IP'si üzerinden çalışıyor: `ssh intsec@192.168.1.100`
+- Host-Only SSH hâlâ sorunlu — Wi-Fi ile devam kararı alındı
+
+**Pipeline Güncellemesi:**
+- ES_HOST `192.168.56.1` → `192.168.27.1` güncellendi:
+  ```bash
+  sed -i 's|192.168.56.1|192.168.27.1|g' ~/pipeline.py
+  ```
+
+**Güncel IP Adresleri:**
+- Windows (host): `192.168.1.126` (Wi-Fi), `192.168.27.1` (Host-Only)
+- Ubuntu: `192.168.1.100` (Wi-Fi), `192.168.27.100` (Host-Only)
+- Kali: `192.168.1.101` (Wi-Fi), `192.168.27.101` (Host-Only)
+- SSH bağlantısı: `ssh intsec@192.168.1.100` (Wi-Fi üzerinden)
+
+**Sistem Başlatma (Güncel):**
+```bash
+# Windows'ta:
+docker-compose up -d
+
+# Ubuntu SSH:
+ssh intsec@192.168.1.100
+sed -i 's|eski_windows_ip:9200|yeni_windows_ip:9200|g' ~/pipeline.py  # IP değiştiyse
+python3 ~/pipeline.py
+
+# Kibana: http://localhost:5601
+# Streamlit: streamlit run src/dashboard/app.py
+```
+
+**Yapılacaklar:**
+- [ ] Demo videosu
+- [ ] README güncelle
+- [ ] PowerPoint tamamla
+- [ ] (Opsiyonel) v16: daha fazla/çeşitli BF verisi toplayıp eğit

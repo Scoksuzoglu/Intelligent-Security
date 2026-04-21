@@ -36,7 +36,7 @@ def fetch_predictions(limit=500):
         result = es.search(
             index=ES_INDEX,
             size=limit,
-            sort=[{'timestamp': {'order': 'desc'}}],
+            sort=[{'@timestamp': {'order': 'desc'}}],
             body={'query': {'match_all': {}}}
         )
         hits = result['hits']['hits']
@@ -52,7 +52,7 @@ def fetch_predictions(limit=500):
             'destination_ip': 'Dest IP',
             'src_port':       'Src Port',
             'dst_port':       'Dst Port',
-            'timestamp':      'Timestamp',
+            '@timestamp':     'Timestamp',
             'attack_type':    'Attack Type',
             'confidence':     'Confidence',
             'csv_source':     'Kaynak'
@@ -84,11 +84,11 @@ def fetch_last_n_minutes(minutes=60, limit=1000):
         result = es.search(
             index=ES_INDEX,
             size=limit,
-            sort=[{'timestamp': {'order': 'desc'}}],
+            sort=[{'@timestamp': {'order': 'desc'}}],
             body={
                 'query': {
                     'range': {
-                        'timestamp': {'gte': since}
+                        '@timestamp': {'gte': since}
                     }
                 }
             }
@@ -105,7 +105,7 @@ def fetch_last_n_minutes(minutes=60, limit=1000):
             'destination_ip': 'Dest IP',
             'src_port':       'Src Port',
             'dst_port':       'Dst Port',
-            'timestamp':      'Timestamp',
+            '@timestamp':     'Timestamp',
             'attack_type':    'Attack Type',
             'confidence':     'Confidence',
             'csv_source':     'Kaynak'
