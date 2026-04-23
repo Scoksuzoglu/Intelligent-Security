@@ -49,6 +49,17 @@ services:
     volumes:
       - kibanadata:/usr/share/kibana/data
 
+  login:
+    image: nginx:alpine
+    container_name: intsec-login
+    ports:
+      - "80:80"
+    volumes:
+      - ./src/frontend/login.html:/usr/share/nginx/html/login.html
+      - ./src/frontend/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - kibana
+
 volumes:
   esdata:
   kibanadata:
