@@ -183,7 +183,46 @@
 
   <div class="card">
     <div class="logo">
-      <div class="logo-icon">🛡️</div>
+      <svg width="56" height="67" viewBox="0 0 400 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0066ff"/>
+            <stop offset="100%" stop-color="#00d4ff"/>
+          </linearGradient>
+          <linearGradient id="lv" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0066ff"/>
+            <stop offset="100%" stop-color="#00d4ff"/>
+          </linearGradient>
+          <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="400" height="480" rx="24" fill="#0a0e1a"/>
+        <rect width="400" height="480" rx="24" fill="none" stroke="#1a2540" stroke-width="1.5"/>
+        <path d="M40 200 C40 200 120 76 200 76 C280 76 360 200 360 200 C360 200 280 324 200 324 C120 324 40 200 40 200 Z" fill="#0e1525" stroke="url(#lg)" stroke-width="3.5"/>
+        <circle cx="200" cy="200" r="84" fill="#0b1220" stroke="url(#lg)" stroke-width="2.5"/>
+        <path d="M200 200 L200 116 A84 84 0 0 1 284 200 Z" fill="#0066ff" opacity="0.2"/>
+        <path d="M200 200 L284 200 A84 84 0 0 1 200 284 Z" fill="#00d4ff" opacity="0.2"/>
+        <path d="M200 200 L200 284 A84 84 0 0 1 116 200 Z" fill="#0066ff" opacity="0.15"/>
+        <path d="M200 200 L116 200 A84 84 0 0 1 200 116 Z" fill="#00d4ff" opacity="0.15"/>
+        <line x1="200" y1="116" x2="200" y2="284" stroke="url(#lv)" stroke-width="1.2" opacity="0.5"/>
+        <line x1="116" y1="200" x2="284" y2="200" stroke="url(#lg)" stroke-width="1.2" opacity="0.5"/>
+        <circle cx="200" cy="116" r="9" fill="#0e1525" stroke="#00d4ff" stroke-width="2.5" filter="url(#glow)"/>
+        <circle cx="284" cy="200" r="9" fill="#0e1525" stroke="#0066ff" stroke-width="2.5" filter="url(#glow)"/>
+        <circle cx="200" cy="284" r="9" fill="#0e1525" stroke="#00d4ff" stroke-width="2.5" filter="url(#glow)"/>
+        <circle cx="116" cy="200" r="9" fill="#0e1525" stroke="#0066ff" stroke-width="2.5" filter="url(#glow)"/>
+        <line x1="40" y1="200" x2="116" y2="200" stroke="url(#lg)" stroke-width="1.5" opacity="0.4"/>
+        <line x1="284" y1="200" x2="360" y2="200" stroke="url(#lg)" stroke-width="1.5" opacity="0.4"/>
+        <path d="M56 176 L40 200 L56 224" stroke="#0066ff" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M344 176 L360 200 L344 224" stroke="#00d4ff" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <rect x="160" y="206" width="80" height="60" rx="10" fill="url(#lg)"/>
+        <path d="M176 206 L176 186 C176 168 224 168 224 186 L224 206" stroke="url(#lg)" stroke-width="12" stroke-linecap="round" fill="none"/>
+        <circle cx="200" cy="232" r="9" fill="#0a0e1a"/>
+        <rect x="195.5" y="232" width="9" height="16" rx="2.5" fill="#0a0e1a"/>
+        <text x="200" y="386" font-family="'Space Grotesk','Helvetica Neue',Arial,sans-serif" font-size="64" font-weight="700" letter-spacing="-2" text-anchor="middle"><tspan fill="#f0f6ff">INT</tspan><tspan fill="#00d4ff">SEC</tspan></text>
+        <text x="200" y="422" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="400" letter-spacing="4" text-anchor="middle" fill="#3a4d6e">INTELLIGENT SECURITY</text>
+      </svg>
       <div class="logo-text">
         <span>INTSEC</span>
         <span>AI-Enhanced Cyberattack Classifier</span>
