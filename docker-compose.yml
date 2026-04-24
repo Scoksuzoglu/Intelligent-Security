@@ -49,6 +49,14 @@ services:
     volumes:
       - kibanadata:/usr/share/kibana/data
 
+  login:
+    build: ./src/frontend
+    container_name: intsec-login
+    ports:
+      - "80:80"
+    depends_on:
+      - kibana
+
 volumes:
   esdata:
   kibanadata:
