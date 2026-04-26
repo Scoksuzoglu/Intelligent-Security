@@ -337,6 +337,92 @@ streamlit run src/dashboard/app.py   # opsiyonel
 
 ---
 
+---
+
+## Session — 2026-04-26 (Semih + Claude)
+
+### Poster Düzenlemeleri
+- **Motivation & Problem** metni yeniden yazıldı: siber saldırıların artması, çok kişilik monitoring ihtiyacı, INTSEC'in tek IT çalışanıyla izleme sağlaması
+- **Model Performance** bölümü kaldırılıp yerini plotların açıklaması aldı
+- **Original Contribution** güncellendi: CIC-IDS2017 + self-generated hibrit veri olduğu belirtildi
+- **Conclusion** yeniden yazıldı: daha az teknik, sunum posterine uygun
+- **Future Work:** paralel sınıflandırma sistemi, Brute Force F1 iyileştirme, yeni saldırı tipleri ekleme
+
+### Notebook Düzeltmeleri
+- **Notebook 19** confusion matrix'te Benign için `4e+0` scientific notation sorunu giderildi → `values_format='d'` eklendi
+
+### Git / Branch İşlemleri
+- `log` branch'i (arkadaş Ahmet'in branch'i) `guncel_model_4`'e merge edildi (GitHub Desktop ile)
+- Login sayfası Docker'a eklendi (`build: ./src/frontend`, port 80)
+- `src/frontend/node_modules/` `.gitignore`'a eklendi
+
+### Login Sistemi
+- React + Vite login sayfası: `npm run dev` ile `localhost:5173`'te çalışıyor
+- Credentials: `intsec` / `intsec123`
+- Login sonrası Kibana'ya (`localhost:5601`) yönlendiriyor
+- Docker'da `intsec-login` servisi eklendi (`docker-compose up --build -d`)
+
+### Elasticsearch / Pipeline Sorunları ve Çözümleri
+- **Sorun:** Kibana'da yeni veriler görünmüyordu
+- **Teşhis:** Ubuntu VM saati yanlıştı (2026-04-23 gösteriyordu, gerçek tarih 2026-04-24)
+- **Çözüm:** `sudo date -s "$(curl -s http://192.168.27.1:9200/_cluster/stats | python3 -c "import sys,json,datetime; d=json.load(sys.stdin); print(datetime.datetime.utcfromtimestamp(d['timestamp']/1000).strftime('%Y-%m-%d %H:%M:%S'))")"` ile ES'ten saat çekilerek ayarlandı
+- **confidence → probability:** Hoca isteği üzerine pipeline'daki `confidence` field adı `probability` olarak güncellendi
+- **IP Güncelleme komutu:** `sed -i 's|ESKİ_IP|YENİ_IP|g' /home/intsec/pipeline.py`
+
+### Ağ Yapısı (GÜNCELLENDİ)
+| Adaptör | Windows IP | Kullanım |
+|---------|-----------|---------|
+| Ethernet 6 (VMware) | `192.168.27.1` | **Sabit** — Ubuntu VM → ES bağlantısı her zaman bu |
+| Wi-Fi | Değişken | Mobil/WiFi'ya göre değişir, pipeline kullanmaz |
+- Ubuntu VM IP: `192.168.27.100`
+- Capture interface: **`enp0s8`** (NOT enp0s3!) — Kali saldırıları buradan geliyor
+- Pipeline: `/home/intsec/pipeline.py`
+- Pipeline ES_HOST fallback: `http://192.168.27.1:9200` (sabit VMware adaptörü)
+
+### Model v16 Geliştirme (multiclass_v16)
+**Hedef:** Brute Force F1 score'u iyileştirmek (~74% → ~90%)
+
+**Yapılan:**
+- Kali'den çeşitli Hydra SSH saldırıları ile yeni BF verisi capture edildi
+  - Capture interface: `enp0s8`, port 22 filtreli
+  - `sudo tcpdump -i enp0s8 -w /home/intsec/bf_ssh.pcap port 22`
+- NTLFlowLyzer ile PCAP → CSV (`/home/intsec/brute_force.csv`)
+- Feature ignore_list pipeline.py'deki ile aynı tutuldu
+
+**Final v16 Konfigürasyonu (çalışan):**
+- v13 ile birebir aynı veri kaynakları, sadece BF verisi değişti
+- BF: `bruteforce_50k.csv` + `bruteforce_100k.csv` + `brute_force.csv` → 5000'e cap'lendi
+- DDoS: `ddos_captures/*.csv` → 5000 cap (v13 ile aynı)
+- Web Attack: `wa_captures/*.csv` (uncapped, v13 ile aynı)
+- Port Scan: `portscan_flows.csv` (uncapped, v13 ile aynı)
+- Benign: CIC 200k (v13 ile aynı)
+- sample_weight: `compute_sample_weight('balanced')` — BF boost YOK
+
+**XGBoost Parametreleri (v16):**
+```
+n_estimators=500, max_depth=10, learning_rate=0.05
+subsample=0.8, colsample_bytree=0.8, min_child_weight=3
+```
+
+**Sonuçlar:** Tüm 5 sınıf başarıyla tespit ediliyor
+- Brute Force: ~%90
+- Port Scan, DDoS, Web Attack, Benign: yüksek doğruluk
+
+**Model Dosyaları:**
+- Windows: `data/models/multiclass_v16/`
+- Ubuntu: `/home/intsec/models/multiclass_v16/`
+- Pipeline: `multiclass_v16` kullanıyor
+
+### Yeni Notebook'lar
+- `notebooks/20_train_multiclass_v16.ipynb` — v16 eğitim notebook'u
+- `notebooks/21_evaluation_report_v16.ipynb` — v16 evaluation (notebook 19'un kopyası, limit=3000)
+
+### Kibana Auto-Refresh
+- Takvim ikonu → zaman aralığı → Refresh every ayarlanabilir
+- Ya da manuel Refresh butonu kullanılıyor
+
+---
+
 ## Risk ve Alternatifler
 
 | Risk | Alternatif |
