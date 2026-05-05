@@ -5,6 +5,18 @@
 
 ---
 
+## PROJE TAMAMLANDI — 2026-05-05
+
+**INTSEC (INTelligent SECurity)** projesi başarıyla tamamlanmıştır.
+
+- **Sunum tarihi:** Mayıs 2026
+- **Final model:** `multiclass_v17` (XGBoost, 5 sınıf)
+- **Uçtan uca pipeline:** PCAP → NTLFlowLyzer → Model → Elasticsearch → Kibana — tamamen çalışıyor
+- **Demo ortamı:** VirtualBox Host-Only network (internet bağımsız, okul sunumu için hazır)
+- **Saldırı tespiti:** DDoS, Port Scan, Web Attack, Brute Force gerçek zamanlı tespit ediliyor
+
+---
+
 ## Proje Özeti
 
 **Proje:** INTSEC - AI-Enhanced Cyberattack Classifier (INTelligent SECurity)
@@ -1055,7 +1067,51 @@ python3 ~/pipeline.py
 ```
 
 **Yapılacaklar:**
-- [ ] Demo videosu
-- [ ] README güncelle
-- [ ] PowerPoint tamamla
-- [ ] (Opsiyonel) v16: daha fazla/çeşitli BF verisi toplayıp eğit
+- [x] Demo videosu
+- [x] README güncelle
+- [x] PowerPoint tamamla
+- [x] v16 eğitildi (BF iyileştirildi) → ardından v17 final model olarak eğitildi
+
+---
+
+### 2026-05-05 (Final Session — Proje Teslimi)
+
+**PROJE TAMAMLANDI.**
+
+**Son Model — multiclass_v17:**
+- v16 üzerine ek iyileştirmelerle eğitildi
+- Dosyalar: `data/models/multiclass_v17/`
+- Ubuntu'ya deploy edildi: `/home/intsec/models/multiclass_v17/`
+- 5 sınıf: Benign, DoS/DDoS, Web Attack, Port Scan, Brute Force
+
+**Tamamlanan Son Görevler:**
+- [x] PowerPoint / sunum hazırlandı
+- [x] Demo videosu çekildi
+- [x] README güncellendi
+- [x] multiclass_v17 eğitildi ve pipeline'a deploy edildi
+- [x] Kibana dashboard (donut chart + alert kuralları) hazır
+- [x] Sunum teslim edildi
+
+**Final Sistem Durumu:**
+| Bileşen | Durum |
+|---------|-------|
+| ML Pipeline (PCAP → ES) | Çalışıyor |
+| Model v17 (XGBoost, 5 sınıf) | Deploy edildi |
+| Elasticsearch + Kibana | Docker Compose ile ayağa kalkıyor |
+| Kibana Dashboard | Donut chart + 4 alert kuralı hazır |
+| Host-Only Network | VirtualBox, internet bağımsız demo hazır |
+| DDoS tespiti (hping3) | Başarılı |
+| Port Scan tespiti (nmap) | Başarılı |
+| Web Attack tespiti (Nikto) | Başarılı |
+| Brute Force tespiti (Hydra) | ~%90 başarı |
+| Login sayfası (React) | Docker'da ayağa kalkıyor (port 80) |
+
+**Proje Ekibi:**
+| İsim | Rol | Katkı |
+|------|-----|-------|
+| Semih Cengiz Öksüzoğlu | Proje Lideri + ML Engineer | Pipeline mimarisi, tüm model geliştirme (v1→v17), veri üretimi, sistem entegrasyonu |
+| Semih İkbal | Backend Developer | File watcher, backend servisler |
+| Veysel Kan | Network Engineer | Ağ altyapısı, VM kurulumu |
+| Ahmet Berk Öz | Frontend Developer | Streamlit dashboard, React login sayfası, Kibana görselleştirme |
+
+*Son güncelleme: 2026-05-05 — PROJE TAMAMLANDI*
